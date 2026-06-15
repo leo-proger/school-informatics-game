@@ -1,271 +1,409 @@
-'use client';
+"use client";
+import { useState, useCallback } from "react";
+import Background from "@/app/components/layout/Background";
+import TopHUD from "@/app/components/layout/TopHUD";
+import TaskMap, { TaskNode } from "@/app/components/tasks/TaskMap";
+import PuzzleModal from "@/app/components/tasks/PuzzleModal";
+import DialogueBox from "@/app/components/dialogue/DialogueBox";
+import GlassPanel from "@/app/components/ui/GlassPanel";
+import NeonButton from "@/app/components/ui/NeonButton";
+import { getCharacter } from "@/app/lib/characters";
+import { round1Tasks, getTask, checkAnswer } from "@/app/data/tasks-round1";
+import { getBossTask, checkBossAnswer } from "@/app/data/tasks-round2";
+import { prologue, round1Complete, round2Start, round2Complete, taskDialogs } from "@/app/data/dialogues";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/app/lib/auth-context';
-import { TASKS, TOURNAMENT_DATES } from '@/app/lib/mock-data';
+// Генерация нод для карты заданий
+function generateNodes(
+  tasks: typeof round1Tasks,
+  completed: string[],
+  activeId: string | null
+): TaskNode[] {
+  return tasks.map((task, index) => {
+    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id);
 
-function useNow() {
-  return new Date();
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      x: 15 + (index % 3) * 30,
+      y: 20 + Math.floor(index / 3) * 30,
+      active: task.id === activeId && isUnlocked,
+      completed: completed.includes(task.id),
+      locked: !isUnlocked && !completed.includes(task.id),
+    };
+  });
 }
 
-function formatTime(ms: number) {
-  if (ms <= 0) return '00:00:00';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+export default function HomePage() {
+  // Фазы игры
+  const [phase, setPhase] = useState<"video" | "prologue" | "round1" | "taskDialogue" | "round1Complete" | "round2Code" | "round2Dialogue" | "round2Boss" | "victory">("video");
+
+  // Пролог
+  const [prologueIndex, setPrologueIndex] = useState(0);
+
+  // Тур 1
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+  const [activeTaskId, setActiveTaskId] = useState<string>(round1Tasks[0].id);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
+  const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
+  const [taskDialogIndex, setTaskDialogIndex] = useState(0);
+
+  // Тур 2
+  const [accessCode, setAccessCode] = useState("");
+  const [round2DialogueIndex, setRound2DialogueIndex] = useState(0);
+  const [bossTask, setBossTask] = useState<any>(null);
+  const [r1cIdx, setR1cIdx] = useState(0);
+
+  // Победа
+  const [victoryIndex, setVictoryIndex] = useState(0);
+  const [showVictoryOverlay, setShowVictoryOverlay] = useState(false);
+
+  // Обработчик выполнения задания
+  const handleTaskSubmit = useCallback((value: string) => {
+    const task = getTask(activeTaskId);
+    if (!task) return false;
+
+    const isCorrect = checkAnswer(task, value);
+
+    if (isCorrect) {
+      const newCompleted = [...completedTasks, activeTaskId];
+      setCompletedTasks(newCompleted);
+
+      const word = "ФЕНИКС";
+      const nextLetter = word[newCompleted.length - 1];
+      setCollectedLetters([...collectedLetters, nextLetter || "?"]);
+
+      // Проверяем завершение тура
+      if (newCompleted.length >= round1Tasks.length) {
+  setPhase("round1Complete");
+  setActiveTaskId("");
+} else {
+  const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id));
+  if (nextTask) {
+    // Показываем диалог перед следующей задачей
+    setPendingTaskId(nextTask.id);
+    setTaskDialogIndex(0);
+    setPhase("taskDialogue");
+  }
 }
+    }
 
-export default function TasksPage() {
-  const { team } = useAuth();
-  const [activeTour, setActiveTour] = useState<1 | 2>(1);
-  const [expandedTask, setExpandedTask] = useState<number | null>(null);
-  const [completedTasks, setCompletedTasks] = useState<Set<number>>(new Set());
+    setModalOpen(false);
+    return isCorrect;
+  }, [activeTaskId, completedTasks, collectedLetters]);
 
-  const now = useNow();
+  const handleBossSubmit = useCallback((value: string) => {
+    if (!bossTask) return false;
+    const correct = checkBossAnswer(bossTask, value);
+    if (correct) {
+      setPhase("victory");
+    }
+    return correct;
+  }, [bossTask]);
 
-  const tour1Active = now >= TOURNAMENT_DATES.tour1Start && now <= TOURNAMENT_DATES.tour1End;
-  const tour2Active = now >= TOURNAMENT_DATES.tour2Start && now <= TOURNAMENT_DATES.tour2End;
-  const tour1Ended = now > TOURNAMENT_DATES.tour1End;
-  const tour2Ended = now > TOURNAMENT_DATES.tour2End;
-
-  // For demo purposes, simulate tour 1 as active (since we're before actual start date)
-  // In production this would use real time
-  const isDemoMode = now < TOURNAMENT_DATES.tour1Start;
-
-  const teamSize = team?.participants.length ?? 1;
-
-  const tour1Tasks = TASKS.filter(t => t.tour === 1 && (t.type === 'base' || (t.type === 'extra' && teamSize > 1)));
-  const tour2Tasks = TASKS.filter(t => t.tour === 2 && (!t.minTeamSize || t.minTeamSize <= teamSize))
-    .sort((a, b) => (a.minTeamSize ?? 0) - (b.minTeamSize ?? 0))
-    .slice(-1);
-
-  const currentTasks = activeTour === 1 ? tour1Tasks : tour2Tasks;
-  const isActive = activeTour === 1 ? (tour1Active || isDemoMode) : (tour2Active);
-  const hasEnded = activeTour === 1 ? tour1Ended : tour2Ended;
-
-  const toggleTask = (id: number) => {
-    setExpandedTask(prev => prev === id ? null : id);
-  };
-
-  const markComplete = (id: number) => {
-    setCompletedTasks(prev => new Set([...prev, id]));
-  };
-
-  const tour1StartsIn = TOURNAMENT_DATES.tour1Start.getTime() - now.getTime();
-  const tour2StartsIn = TOURNAMENT_DATES.tour2Start.getTime() - now.getTime();
-
+  // ==================== РЕНДЕР ====================
+// Видео-ролик в начале игры
+if (phase === "video") {
   return (
-    <div className="min-h-screen cyber-grid px-4 py-10 relative overflow-hidden">
-      <div className="absolute top-20 right-10 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #3b82f6, transparent)' }} />
-
-      <div className="relative z-10 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-10">
-          <p className="text-xs font-mono tracking-[0.4em] text-blue-300 uppercase mb-2">/NEXUS СИСТЕМА/</p>
-          <h1 className="text-4xl font-black neon-text mb-3">ЗАДАНИЯ</h1>
-          {team ? (
-            <p className="text-sm text-slate-200 font-mono">
-              Команда: <span className="text-purple-300">{team.name}</span> ·
-              {' '}{teamSize} участник(а) ·
-              <span className="text-green-400 ml-2">Очки: {team.score}</span>
-            </p>
-          ) : (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-sm text-yellow-400 w-fit font-mono">
-              ⚠ <Link href="/login" className="hover:underline">Войдите в систему</Link> для доступа к заданиям
-            </div>
-          )}
-        </div>
-
-        {/* Tour selector */}
-        <div className="flex gap-3 mb-8">
-          {([1, 2] as const).map(tour => {
-            const active = tour === 1 ? (tour1Active || isDemoMode) : tour2Active;
-            const ended = tour === 1 ? tour1Ended : tour2Ended;
-            return (
-              <button
-                key={tour}
-                onClick={() => setActiveTour(tour)}
-                className={`flex-1 py-4 rounded-xl text-sm font-semibold tracking-wide uppercase transition-all duration-200 border
-                  ${activeTour === tour
-                    ? 'border-purple-500/50 text-purple-200 bg-purple-500/10 shadow-[0_0_20px_rgba(168,85,247,0.2)]'
-                    : 'border-gray-700/50 text-slate-300 hover:border-purple-500/30 hover:text-slate-100'
-                  }`}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span>Тур {tour}</span>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full
-                    ${active ? 'bg-green-500/20 text-green-400' : ended ? 'bg-gray-600/20 text-slate-300' : 'bg-yellow-500/20 text-yellow-500'}`}>
-                    {active ? '● АКТИВЕН' : ended ? '✓ ЗАВЕРШЁН' : '○ ОЖИДАНИЕ'}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Timer / countdown */}
-        {!isActive && !hasEnded && (
-          <div className="card-glow rounded-xl p-5 mb-8 text-center">
-            <p className="text-xs font-mono text-slate-300 uppercase tracking-widest mb-2">До начала тура {activeTour}</p>
-            <p className="text-3xl font-mono font-black text-purple-300 neon-text">
-              {formatTime(activeTour === 1 ? tour1StartsIn : tour2StartsIn)}
-            </p>
-            <p className="text-xs text-slate-400 mt-2 font-mono">
-              Старт: {(activeTour === 1 ? TOURNAMENT_DATES.tour1Start : TOURNAMENT_DATES.tour2Start)
-                .toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-        )}
-
-        {/* Demo mode notice */}
-        {isDemoMode && activeTour === 1 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-blue-500/20 bg-blue-500/5 text-xs text-blue-300 font-mono mb-6">
-            ◈ ДЕМО-РЕЖИМ · Задания показаны в ознакомительных целях
-          </div>
-        )}
-
-        {/* Active timer */}
-        {(tour1Active || tour2Active) && (
-          <div className="card-glow rounded-xl p-4 mb-8 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-mono text-green-400 uppercase tracking-widest">Тур {activeTour === 1 ? '1' : '2'} активен</p>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Завершение: {(activeTour === 1 ? TOURNAMENT_DATES.tour1End : TOURNAMENT_DATES.tour2End)
-                  .toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-mono text-slate-300 uppercase">Осталось</p>
-              <p className="text-xl font-mono font-black text-green-400">
-                {formatTime((activeTour === 1 ? TOURNAMENT_DATES.tour1End : TOURNAMENT_DATES.tour2End).getTime() - now.getTime())}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Tasks list */}
-        <div className="space-y-3">
-          {currentTasks.length === 0 && (
-            <div className="card-glow rounded-xl p-8 text-center text-slate-300 font-mono text-sm">
-              Задания для тура {activeTour} пока недоступны
-            </div>
-          )}
-
-          {currentTasks.map((task, idx) => {
-            const isCompleted = completedTasks.has(task.id);
-            const isLocked = !isActive && !hasEnded && !isDemoMode;
-            const isExpanded = expandedTask === task.id;
-
-            return (
-              <div
-                key={task.id}
-                className={`rounded-xl border transition-all duration-300 overflow-hidden
-                  ${isCompleted
-                    ? 'border-green-500/30 bg-green-500/5'
-                    : isLocked
-                      ? 'border-gray-700/30 opacity-60'
-                      : 'card-glow hover:border-purple-500/40 cursor-pointer'
-                  }`}
-              >
-                <div
-                  className="flex items-center gap-4 p-4"
-                  onClick={() => !isLocked && toggleTask(task.id)}
-                >
-                  {/* Number */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 border
-                    ${isCompleted
-                      ? 'border-green-500/40 bg-green-500/10 text-green-400'
-                      : isLocked
-                        ? 'border-gray-700 bg-gray-800/30 text-slate-400'
-                        : 'border-purple-500/30 bg-purple-500/10 text-purple-300'
-                    }`}>
-                    {isCompleted ? '✓' : isLocked ? '🔒' : `${String(idx + 1).padStart(2, '0')}`}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className={`text-sm font-semibold ${isCompleted ? 'text-green-300' : 'text-white'}`}>
-                        {task.title}
-                      </h3>
-                      {task.type === 'extra' && (
-                        <span className="px-1.5 py-0.5 text-[10px] rounded font-mono bg-blue-500/15 text-blue-300 border border-blue-500/20">
-                          +ДОП
-                        </span>
-                      )}
-                      {task.type === 'boss' && (
-                        <span className="px-1.5 py-0.5 text-[10px] rounded font-mono bg-red-500/15 text-red-400 border border-red-500/20">
-                          BOSS
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-300 mt-0.5 truncate">{task.description}</p>
-                  </div>
-
-                  {/* Points + expand */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-sm font-mono font-bold ${isCompleted ? 'text-green-400' : 'text-purple-300'}`}>
-                      +{task.points}
-                    </span>
-                    {!isLocked && (
-                      <span className={`text-slate-400 text-xs transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Expanded content */}
-                {isExpanded && !isLocked && (
-                  <div className="px-4 pb-4 pt-0 border-t border-purple-500/10">
-                    <div className="pt-4 space-y-4">
-                      <div>
-                        <p className="text-xs font-mono text-slate-300 uppercase tracking-widest mb-1">Описание</p>
-                        <p className="text-sm text-slate-100 leading-relaxed">{task.description}</p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
-                        <p className="text-xs font-mono text-yellow-500 uppercase tracking-widest mb-1">// ПОДСКАЗКА</p>
-                        <p className="text-sm text-yellow-300/80 font-mono">{task.hint}</p>
-                      </div>
-                      {!isCompleted && team && (
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="text"
-                            placeholder="Введите ответ..."
-                            className="input-neon flex-1 px-3 py-2 rounded-lg text-sm font-mono"
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); markComplete(task.id); }}
-                            className="btn-solid px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap"
-                          >
-                            Отправить
-                          </button>
-                        </div>
-                      )}
-                      {isCompleted && (
-                        <div className="flex items-center gap-2 text-green-400 text-sm font-mono">
-                          <span className="text-green-400">✓</span> Задание выполнено · +{task.points} очков
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Tour 2 intro text */}
-        {activeTour === 2 && (
-          <div className="mt-8 card-glow rounded-xl p-6 font-mono text-sm text-slate-100 leading-relaxed">
-            <p className="text-red-400 font-bold mb-3 flicker">/ VOID /</p>
-            <p className="text-slate-200 mb-3">Да как вы посмели…</p>
-            <p className="text-purple-300">/ПРОТОКОЛ/ Поздравляю! Введите собранный код доступа для расшифровки вируса VOID.</p>
-          </div>
-        )}
-      </div>
+    <div className="relative min-h-screen flex items-center justify-center bg-black">
+      <video
+        className="absolute inset-0 w-full h-full object-cover"
+        autoPlay
+        muted
+        onEnded={() => setPhase("prologue")}
+      >
+        <source src="/videos/promo.mp4" type="video/mp4" />
+        Ваш браузер не поддерживает видео.
+      </video>
+      
+      {/* Опционально: кнопка пропуска */}
+      <button
+        onClick={() => setPhase("prologue")}
+        className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+      >
+        Пропустить ↓
+      </button>
     </div>
   );
+}
+  // Пролог
+  if (phase === "prologue") {
+    const line = prologue[prologueIndex];
+    const character = getCharacter(line.character);
+
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={0} letters={[]} title="BOOT SEQUENCE" />
+        <DialogueBox
+          speaker={character.name}
+          avatar={character.avatarPlaceholder}
+          color={character.color}
+          text={line.text}
+          onNext={() => {
+            if (prologueIndex < prologue.length - 1) {
+              setPrologueIndex(prologueIndex + 1);
+            } else {
+              setPhase("round1");
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Тур 1 — Задания
+  if (phase === "round1") {
+    const nodes = generateNodes(round1Tasks, completedTasks, activeTaskId);
+    const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
+
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={progress} letters={collectedLetters} title="ROUND 1 • NEXUS" />
+
+        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
+          <div className="w-full max-w-[1700px]">
+            <TaskMap
+              tasks={nodes}
+              onSelect={(id) => {
+                const node = nodes.find(n => n.id === id);
+                if (node && !node.locked) {
+                  setActiveTaskId(id);
+                  setModalOpen(true);
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <PuzzleModal
+          open={modalOpen}
+          title={activeTaskId ? getTask(activeTaskId)?.title ?? "" : ""}
+          description={activeTaskId ? getTask(activeTaskId)?.description ?? "" : ""}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleTaskSubmit}
+          timeLimit={activeTaskId ? getTask(activeTaskId)?.timeLimit : undefined}
+        />
+      </div>
+    );
+  }
+// Диалог между задачами
+if (phase === "taskDialogue" && pendingTaskId) {
+  const dialogLines = taskDialogs[pendingTaskId];
+  
+  // Если диалога нет для этой задачи — сразу открываем задачу
+  if (!dialogLines || dialogLines.length === 0) {
+    setActiveTaskId(pendingTaskId);
+    setPendingTaskId(null);
+    setPhase("round1");
+    setModalOpen(true);
+    return null;
+  }
+  
+  const currentLine = dialogLines[taskDialogIndex];
+  const character = getCharacter(currentLine.character);
+  const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
+  
+  return (
+    <div className="relative min-h-screen">
+      <Background />
+      <TopHUD progress={progress} letters={collectedLetters} title="NEW TASK" />
+      <DialogueBox
+        speaker={character.name}
+        avatar={character.avatarPlaceholder}
+        color={character.color}
+        text={currentLine.text}
+        onNext={() => {
+          if (taskDialogIndex < dialogLines.length - 1) {
+            setTaskDialogIndex(taskDialogIndex + 1);
+          } else {
+            // Диалог закончен — открываем задачу
+            setActiveTaskId(pendingTaskId);
+            setPendingTaskId(null);
+            setPhase("round1");
+            setModalOpen(true);
+          }
+        }}
+      />
+    </div>
+  );
+}
+  // Завершение тура 1
+  if (phase === "round1Complete") {
+    if (r1cIdx >= round1Complete.length) {
+      setPhase("round2Code");
+      setR1cIdx(0);
+      return null;
+    }
+
+    const currentLine = round1Complete[r1cIdx];
+    const character = getCharacter(currentLine.character);
+
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={100} letters={collectedLetters} title="ROUND 1 COMPLETE" />
+        <DialogueBox
+          speaker={character.name}
+          avatar={character.avatarPlaceholder}
+          color={character.color}
+          text={currentLine.text}
+          onNext={() => {
+            if (r1cIdx < round1Complete.length - 1) {
+              setR1cIdx(r1cIdx + 1);
+            } else {
+              setPhase("round2Code");
+              setR1cIdx(0);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Тур 2 — Ввод кода
+  if (phase === "round2Code") {
+    const expectedCode = collectedLetters.join("");
+
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={50} letters={collectedLetters} title="ACCESS CODE" />
+
+        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
+          <GlassPanel className="p-12 max-w-2xl w-full text-center">
+            <h2 className="text-3xl text-yellow-300 font-bold mb-4">ВВЕДИТЕ КОД ДОСТУПА</h2>
+            <p className="text-gray-400 mb-6">
+              Собранные буквы: <span className="text-yellow-300 font-bold tracking-[8px]">{collectedLetters.join(" ")}</span>
+            </p>
+
+            <input
+              type="text"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+              className="w-full bg-black/60 border border-yellow-500/30 p-4 text-yellow-300 text-2xl text-center outline-none mb-6 tracking-[8px]"
+              placeholder="ВВЕДИТЕ КОД"
+            />
+
+            <NeonButton
+              color="cyan"
+              onClick={() => {
+                if (accessCode === expectedCode) {
+                  setPhase("round2Dialogue");
+                  setAccessCode("");
+                  setRound2DialogueIndex(0);
+                }
+              }}
+              className="text-xl px-8 py-4"
+            >
+              ПОДТВЕРДИТЬ
+            </NeonButton>
+          </GlassPanel>
+        </div>
+      </div>
+    );
+  }
+
+  // Тур 2 — Диалог перед боссом
+  if (phase === "round2Dialogue") {
+    if (round2DialogueIndex >= round2Start.length) {
+      const task = getBossTask(1);
+      setBossTask(task);
+      setPhase("round2Boss");
+      return null;
+    }
+
+    const line = round2Start[round2DialogueIndex];
+    const character = getCharacter(line.character);
+
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={75} letters={collectedLetters} title="FINAL BATTLE" />
+        <DialogueBox
+          speaker={character.name}
+          avatar={character.avatarPlaceholder}
+          color={character.color}
+          text={line.text}
+          onNext={() => {
+            if (round2DialogueIndex < round2Start.length - 1) {
+              setRound2DialogueIndex(round2DialogueIndex + 1);
+            } else {
+              const task = getBossTask(1);
+              setBossTask(task);
+              setPhase("round2Boss");
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Тур 2 — Босс
+  if (phase === "round2Boss" && bossTask) {
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={75} letters={collectedLetters} title="VOID BOSS" />
+
+        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
+          <PuzzleModal
+            open={true}
+            title={bossTask.title}
+            description={bossTask.description}
+            hint={bossTask.hint}
+            timeLimit={bossTask.timeLimit}
+            onClose={() => {}}
+            onSubmit={handleBossSubmit}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Победа
+  if (phase === "victory") {
+    if (victoryIndex >= round2Complete.length) {
+      if (!showVictoryOverlay) {
+        setShowVictoryOverlay(true);
+      }
+      return (
+        <div className="relative min-h-screen">
+          <Background />
+          <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div className="text-center">
+              <h1 className="text-8xl font-bold text-yellow-300 animate-pulse mb-8">
+                ПОБЕДА!
+              </h1>
+              <p className="text-2xl text-yellow-200">
+                VOID уничтожен. NEXUS очищен.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const line = round2Complete[victoryIndex];
+    const character = getCharacter(line.character);
+
+    return (
+      <div className="relative min-h-screen">
+        <Background />
+        <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
+        <DialogueBox
+          speaker={character.name}
+          avatar={character.avatarPlaceholder}
+          color={character.color}
+          text={line.text}
+          onNext={() => setVictoryIndex(victoryIndex + 1)}
+        />
+      </div>
+    );
+  }
+
+  return null;
 }

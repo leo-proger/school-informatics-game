@@ -123,6 +123,51 @@ export const round1Complete: DialogueLine[] = [
   }
 ];
 
+export const taskDialogs: Record<string, DialogueLine[]> = {
+  "task-1": [
+    { character: "nexus", text: "Первый файл искажён шифром Цезаря. Это древний метод сдвига букв.", event: "info" },
+    { character: "void", text: "Ха-ха! Попробуйте расшифровать, если сможете!", event: "danger" },
+    { character: "protocol", text: "Сдвиг 3. Удачи!", event: "info" }
+  ],
+  "task-2": [
+    { character: "nexus", text: "Отлично! VOID перешёл на двоичный код.", event: "success" },
+    { character: "protocol", text: "Переведите 01010000 01001000 01001111 01000101 01001110 01001001 01011000 в текст.", event: "info" },
+    { character: "void", text: "Это же PHOENIX... Не может быть!", event: "danger" }
+  ],
+  "task-3": [
+    { character: "nexus", text: "Вирус мутирует. Теперь логическая аномалия.", event: "warning" },
+    { character: "void", text: "Найдите закономерность, если сможете...", event: "danger" },
+    { character: "protocol", text: "2→6, 3→12, 4→20, 5→30, 6→?", event: "info" }
+  ],
+  "task-4": [
+    { character: "nexus", text: "VOID исказил ключевое слово!", event: "warning" },
+    { character: "void", text: "П_И_О_ОЛ — без этих букв вам не пройти!", event: "danger" },
+    { character: "protocol", text: "Восстанови пропущенные буквы. Это системный термин.", event: "info" }
+  ],
+  "task-5": [
+    { character: "nexus", text: "Финальное задание первого раунда!", event: "success" },
+    { character: "protocol", text: "Вычисли сумму букв слова VOID по алфавиту (A=1, B=2...)", event: "info" },
+    { character: "void", text: "Просчитай моё имя... если сможешь!", event: "danger" }
+  ],
+  "task-6": [
+    { character: "nexus", text: "Дополнительное задание! VOID не сдаётся.", event: "warning" },
+    { character: "protocol", text: "Конвертируй HEX: 4E 45 58 55 53", event: "info" }
+  ],
+  "task-7": [
+    { character: "nexus", text: "Ещё один заражённый файл.", event: "info" },
+    { character: "void", text: "1, 1, 2, 3, 5, 8, ? — продолжи последовательность!", event: "danger" }
+  ],
+  "task-8": [
+    { character: "nexus", text: "VOID перевернул слово задом наперёд.", event: "info" },
+    { character: "protocol", text: "Расшифруй: СУРИВ", event: "info" }
+  ],
+  "task-9": [
+    { character: "nexus", text: "Финальное испытание перед боссом!", event: "warning" },
+    { character: "protocol", text: "Сколько бит в 4 килобайтах?", event: "info" },
+    { character: "void", text: "Это невозможно вычислить!", event: "danger" }
+  ]
+};
+
 export const round2Start: DialogueLine[] = [
   {
     character: "protocol",
