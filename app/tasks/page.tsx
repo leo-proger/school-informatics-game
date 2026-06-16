@@ -12,7 +12,7 @@ import { round1Tasks, getTask, checkAnswer } from "@/app/data/tasks-round1";
 import { getBossTask, checkBossAnswer } from "@/app/data/tasks-round2";
 import { prologue, round1Complete, round2Start, round2Complete, taskDialogs } from "@/app/data/dialogues";
 
-// Генерация нод для карты заданий
+
 function generateNodes(
   tasks: typeof round1Tasks,
   completed: string[],
@@ -103,7 +103,7 @@ export default function HomePage() {
   }, [bossTask]);
 
   // ==================== РЕНДЕР ====================
-// Видео-ролик в начале игры
+
 if (phase === "video") {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-black">
