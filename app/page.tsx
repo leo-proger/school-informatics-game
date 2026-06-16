@@ -102,6 +102,81 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-purple-500/15 mt-0"
+        style={{ background: 'rgba(6, 6, 15, 0.7)' }}>
+        <div className="max-w-5xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-10">
+
+            {/* Brand */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded border border-purple-500/50 flex items-center justify-center">
+                  <span className="text-purple-300 font-bold text-xs">Ф</span>
+                </div>
+                <span className="font-bold text-sm tracking-widest text-purple-300 uppercase">
+                  Protocol<span className="text-blue-300 ml-1">Phoenix</span>
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed font-mono">
+                Международный хакатон по информатике и кибербезопасности для школьников.
+              </p>
+              <p className="text-xs text-slate-600 mt-3 font-mono">© 2026 NEXUS Hackathon</p>
+            </div>
+
+            {/* Schedule */}
+            <div>
+              <p className="text-xs text-purple-300 tracking-widest uppercase font-mono mb-4">Расписание</p>
+              <ul className="space-y-2 text-xs font-mono">
+                {[
+                  { date: '06.06', label: 'Старт турнира', color: 'text-green-400' },
+                  { date: '09.06', label: 'Тур 1 · 10:00–10:40', color: 'text-cyan-400' },
+                  { date: '15.06', label: 'Тур 2 · 11:00–12:30', color: 'text-blue-400' },
+                  { date: '20.06', label: 'Финал и награждение', color: 'text-yellow-400' },
+                ].map(e => (
+                  <li key={e.date} className="flex items-center gap-3">
+                    <span className={`${e.color} w-12 shrink-0`}>{e.date}</span>
+                    <span className="text-slate-400">{e.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Info */}
+            <div>
+              <p className="text-xs text-purple-300 tracking-widest uppercase font-mono mb-4">Форматы</p>
+              <ul className="space-y-2 text-xs font-mono text-slate-400">
+                {[
+                  '1–5 участников в команде',
+                  'Шифры, логика, двоичный код',
+                  'Командный формат, онлайн',
+                  'Призы за топ-3 места',
+                  'Все уровни подготовки',
+                ].map(item => (
+                  <li key={item} className="flex items-center gap-2">
+                    <span className="text-purple-500">◈</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-purple-500/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-4 text-xs font-mono">
+              <Link href="/tasks" className="text-slate-500 hover:text-purple-300 transition-colors">Задания</Link>
+              <Link href="/leaderboard" className="text-slate-500 hover:text-purple-300 transition-colors">Рейтинг</Link>
+              <Link href="/register" className="text-slate-500 hover:text-purple-300 transition-colors">Регистрация</Link>
+              <Link href="/login" className="text-slate-500 hover:text-purple-300 transition-colors">Вход</Link>
+            </div>
+            <p className="text-xs font-mono text-slate-600">
+              NEXUS · 2031 · <span className="text-red-600/70">VOID</span> must fall
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
