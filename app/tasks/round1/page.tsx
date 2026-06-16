@@ -21,26 +21,31 @@ type Phase =
 function generateNodes(
   tasks: typeof round1Tasks,
   completed: string[],
+  failed: string[],
   activeId: string | null
 ): TaskNode[] {
   return tasks.map((task, index) => {
-    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id);
+    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id) || failed.includes(tasks[index - 1].id);
+    const isFailed = failed.includes(task.id);
+    const isCompleted = completed.includes(task.id);
+    
     return {
       id: task.id,
       title: task.title,
       description: task.description,
       x: 15 + (index % 3) * 30,
       y: 20 + Math.floor(index / 3) * 30,
-      active: task.id === activeId && isUnlocked,
-      completed: completed.includes(task.id),
-      locked: !isUnlocked && !completed.includes(task.id),
+      active: task.id === activeId && isUnlocked && !isFailed && !isCompleted,
+      completed: isCompleted,
+      locked: !isUnlocked,
+      failed: isFailed,
     };
   });
 }
 
 export default function Round1Page() {
   const [loaded, setLoaded] = useState(false);
-
+  const [failedTasks, setFailedTasks] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>("video");
   const [prologueIndex, setPrologueIndex] = useState(0);
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
@@ -72,6 +77,7 @@ export default function Round1Page() {
         setTaskDialogIndex(data.taskDialogIndex ?? 0);
         setRound2DialogueIndex(data.round2DialogueIndex ?? 0);
         setR1cIdx(data.r1cIdx ?? 0);
+        setFailedTasks(data.failedTasks ?? []);
         setVictoryIndex(data.victoryIndex ?? 0);
         if (savedPhase === "round2Boss" || savedPhase === "round2Dialogue") {
           setBossTask(getBossTask(1));
@@ -79,7 +85,7 @@ export default function Round1Page() {
       }
     } catch {}
     setLoaded(true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Автосохранение при изменении ключевых состояний
   useEffect(() => {
@@ -95,12 +101,13 @@ export default function Round1Page() {
         taskDialogIndex,
         round2DialogueIndex,
         r1cIdx,
+        failedTasks,
         victoryIndex,
         savedAt: new Date().toISOString(),
       }));
     } catch {}
   }, [loaded, phase, prologueIndex, completedTasks, activeTaskId, collectedLetters,
-      pendingTaskId, taskDialogIndex, round2DialogueIndex, r1cIdx, victoryIndex]);
+      pendingTaskId, taskDialogIndex, round2DialogueIndex, r1cIdx, failedTasks, victoryIndex]);
 
   const handleTaskSubmit = useCallback((value: string) => {
     const task = getTask(activeTaskId);
@@ -120,18 +127,19 @@ export default function Round1Page() {
         setPhase("round1Complete");
         setActiveTaskId("");
       } else {
-        const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id));
+        const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id) && !failedTasks.includes(t.id));
         if (nextTask) {
           setPendingTaskId(nextTask.id);
           setTaskDialogIndex(0);
           setPhase("taskDialogue");
         }
       }
+    } else {
+      setFailedTasks(prev => [...prev, activeTaskId]);
     }
 
-    setModalOpen(false);
     return isCorrect;
-  }, [activeTaskId, completedTasks]);
+  }, [activeTaskId, completedTasks, failedTasks]);
 
   const handleBossSubmit = useCallback((value: string) => {
     if (!bossTask) return false;
@@ -140,7 +148,7 @@ export default function Round1Page() {
     return correct;
   }, [bossTask]);
 
-  // Пока грузимся — не рендерим ничего (избегаем вспышки видео)
+  // Пока грузимся — не рендерим ничего
   if (!loaded) {
     return (
       <div className="fixed inset-0 bg-[#050816] flex items-center justify-center">
@@ -189,7 +197,9 @@ export default function Round1Page() {
             if (prologueIndex < prologue.length - 1) {
               setPrologueIndex(prologueIndex + 1);
             } else {
-              setPhase("round1");
+              setPendingTaskId(round1Tasks[0].id);
+              setTaskDialogIndex(0);
+              setPhase("taskDialogue");
             }
           }}
         />
@@ -198,7 +208,7 @@ export default function Round1Page() {
   }
 
   if (phase === "round1") {
-    const nodes = generateNodes(round1Tasks, completedTasks, activeTaskId);
+    const nodes = generateNodes(round1Tasks, completedTasks, failedTasks, activeTaskId);
     const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
     return (
       <div className="relative min-h-screen">
@@ -211,8 +221,14 @@ export default function Round1Page() {
               onSelect={(id) => {
                 const node = nodes.find(n => n.id === id);
                 if (node && !node.locked) {
-                  setActiveTaskId(id);
-                  setModalOpen(true);
+                  if (!completedTasks.includes(id) && !failedTasks.includes(id)) {
+                    setPendingTaskId(id);
+                    setTaskDialogIndex(0);
+                    setPhase("taskDialogue");
+                  } else {
+                    setActiveTaskId(id);
+                    setModalOpen(true);
+                  }
                 }
               }}
             />
@@ -222,9 +238,12 @@ export default function Round1Page() {
           open={modalOpen}
           title={activeTaskId ? getTask(activeTaskId)?.title ?? "" : ""}
           description={activeTaskId ? getTask(activeTaskId)?.description ?? "" : ""}
+          hint={activeTaskId ? getTask(activeTaskId)?.hint : ""}
           onClose={() => setModalOpen(false)}
           onSubmit={handleTaskSubmit}
           timeLimit={activeTaskId ? getTask(activeTaskId)?.timeLimit : undefined}
+          isCompleted={activeTaskId ? completedTasks.includes(activeTaskId) : false}
+          isFailed={activeTaskId ? failedTasks.includes(activeTaskId) : false}
         />
       </div>
     );
@@ -239,6 +258,7 @@ export default function Round1Page() {
       setModalOpen(true);
       return null;
     }
+
     const currentLine = dialogLines[taskDialogIndex];
     const character = getCharacter(currentLine.character);
     const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
@@ -255,8 +275,9 @@ export default function Round1Page() {
             if (taskDialogIndex < dialogLines.length - 1) {
               setTaskDialogIndex(taskDialogIndex + 1);
             } else {
-              setActiveTaskId(pendingTaskId);
+              const taskId = pendingTaskId;
               setPendingTaskId(null);
+              setActiveTaskId(taskId);
               setPhase("round1");
               setModalOpen(true);
             }

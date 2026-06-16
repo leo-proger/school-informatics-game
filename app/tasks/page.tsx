@@ -29,6 +29,7 @@ export default function TasksPage() {
   const router = useRouter();
   const [showConfirm, setShowConfirm] = useState(false);
   const [saveLabel, setSaveLabel] = useState<string | null>(null);
+  const [hasShownTaskDialog, setHasShownTaskDialog] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const raw = localStorage.getItem(SAVE_KEY);

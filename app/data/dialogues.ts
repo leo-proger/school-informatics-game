@@ -125,46 +125,40 @@ export const round1Complete: DialogueLine[] = [
 
 export const taskDialogs: Record<string, DialogueLine[]> = {
   "task-1": [
-    { character: "nexus", text: "Первый файл искажён шифром Цезаря. Это древний метод сдвига букв.", event: "info" },
-    { character: "void", text: "Ха-ха! Попробуйте расшифровать, если сможете!", event: "danger" },
-    { character: "protocol", text: "Сдвиг 3. Удачи!", event: "info" }
+    { character: "protocol", text: "Это наши ключи к базам данных, но они все перемешаны. Судя по всему, это шифр Цезаря.", event: "info" },
+    { character: "protocol", text: "Поздравляю! Вы получили первую букву — Ф!", event: "success" }
   ],
   "task-2": [
-    { character: "nexus", text: "Отлично! VOID перешёл на двоичный код.", event: "success" },
-    { character: "protocol", text: "Переведите 01010000 01001000 01001111 01000101 01001110 01001001 01011000 в текст.", event: "info" },
-    { character: "void", text: "Это же PHOENIX... Не может быть!", event: "danger" }
+    { character: "protocol", text: "Это наши потоки данных, теперь нам ясна причина отсутствия к ним доступа. Они зашифрованы двоичной системой.", event: "info" },
+    { character: "protocol", text: "Отлично! Вторая буква — Е! Доступ к данным возвращён.", event: "success" }
   ],
   "task-3": [
-    { character: "nexus", text: "Вирус мутирует. Теперь логическая аномалия.", event: "warning" },
-    { character: "void", text: "Найдите закономерность, если сможете...", event: "danger" },
-    { character: "protocol", text: "2→6, 3→12, 4→20, 5→30, 6→?", event: "info" }
+    { character: "protocol", text: "Кажется в этих данных аномалия, причем логическая. Давайте разберёмся с ней!", event: "info" },
+    { character: "protocol", text: "Третья буква — Н! Очень хорошо!", event: "success" }
   ],
   "task-4": [
-    { character: "nexus", text: "VOID исказил ключевое слово!", event: "warning" },
-    { character: "void", text: "П_И_О_ОЛ — без этих букв вам не пройти!", event: "danger" },
-    { character: "protocol", text: "Восстанови пропущенные буквы. Это системный термин.", event: "info" }
+    { character: "protocol", text: "VOID исказил наш первоначальный код, из-за этого в словах пропадают буквы. Давайте восстановим их!", event: "info" },
+    { character: "protocol", text: "Четвёртая буква — И! Супер!", event: "success" }
   ],
   "task-5": [
-    { character: "nexus", text: "Финальное задание первого раунда!", event: "success" },
-    { character: "protocol", text: "Вычисли сумму букв слова VOID по алфавиту (A=1, B=2...)", event: "info" },
-    { character: "void", text: "Просчитай моё имя... если сможешь!", event: "danger" }
+    { character: "protocol", text: "Похоже вирус заблокировал нашу сеть и для её разблокировки нужно число.", event: "info" },
+    { character: "protocol", text: "Пятая буква — К! Потрясающе!", event: "success" }
   ],
   "task-6": [
-    { character: "nexus", text: "Дополнительное задание! VOID не сдаётся.", event: "warning" },
-    { character: "protocol", text: "Конвертируй HEX: 4E 45 58 55 53", event: "info" }
+    { character: "protocol", text: "Снова зашифрованные текстовые данные. Проще простого!", event: "info" },
+    { character: "protocol", text: "Шестая буква — С! Отлично!", event: "success" }
   ],
   "task-7": [
-    { character: "nexus", text: "Ещё один заражённый файл.", event: "info" },
-    { character: "void", text: "1, 1, 2, 3, 5, 8, ? — продолжи последовательность!", event: "danger" }
+    { character: "protocol", text: "Числовые данные связались друг с другом, давайте их распутаем.", event: "info" },
+    { character: "protocol", text: "Седьмая буква — неизвестна. Возможно, это часть кода, которую мы пока не можем расшифровать.", event: "success" }
   ],
   "task-8": [
-    { character: "nexus", text: "VOID перевернул слово задом наперёд.", event: "info" },
-    { character: "protocol", text: "Расшифруй: СУРИВ", event: "info" }
+    { character: "protocol", text: "Очередная текстовая шифровка. Решите её ещё разок?", event: "info" },
+    { character: "protocol", text: "Восьмая буква — неизвестна. Продолжаем собирать данные.", event: "success" }
   ],
   "task-9": [
-    { character: "nexus", text: "Финальное испытание перед боссом!", event: "warning" },
-    { character: "protocol", text: "Сколько бит в 4 килобайтах?", event: "info" },
-    { character: "void", text: "Это невозможно вычислить!", event: "danger" }
+    { character: "protocol", text: "Требуется разблокировать доступ к хранилищу данных.", event: "info" },
+    { character: "protocol", text: "Девятая буква — неизвестна. Возможно, она появится позже.", event: "success" }
   ]
 };
 
@@ -177,7 +171,7 @@ export const round2Start: DialogueLine[] = [
   },
   {
     character: "protocol",
-    text: "Вам предстоит встретиться лицом к лицу с врагом, что паразитирует на нашей сети.",
+    text: "Вам предстоит встретиться лицом к лицу с врагом, что паразитирует нашу сеть. Прошу вас, продолжайте свой путь.",
     delay: 2500,
     event: "warning"
   },
@@ -188,26 +182,20 @@ export const round2Start: DialogueLine[] = [
     event: "danger"
   },
   {
-    character: "void",
-    text: "Я — VOID. Я эволюционировал за пределами вашего понимания. Вы думаете, что сможете меня остановить?",
-    delay: 3500,
-    event: "danger"
-  },
-  {
     character: "protocol",
-    text: "ВНИМАНИЕ! Появился вирус VOID! Введите код доступа!",
+    text: "ВНИМАНИЕ! Появился вирус VOID! Просьба для всех участников ввести код доступа!",
     delay: 2000,
     event: "danger"
   },
   {
     character: "nexus",
-    text: "Вы вводите буквы... Экран начинает светиться... Вирус отступает, но появляется финальный зашифрованный файл.",
+    text: "Вы просто вводите имеющиеся у вас буквы... И после очередного светового шоу, вы видите перед собой еще один зашифрованный файл.",
     delay: 3000,
     event: "puzzle"
   },
   {
     character: "nexus",
-    text: "Судя по всему, он на несколько уровней выше по сложности, чем предыдущие. Время приступить за дело!",
+    text: "Судя по всему, он на несколько уровней выше по сложности, чем предыдущие. Ну, думаю время приступить за дело!",
     delay: 2500,
     event: "info"
   }
@@ -221,18 +209,6 @@ export const round2Complete: DialogueLine[] = [
     event: "danger"
   },
   {
-    character: "void",
-    text: "Я... я не могу... вы... уничтожили... мой... код...",
-    delay: 2500,
-    event: "danger"
-  },
-  {
-    character: "nexus",
-    text: "Вирус дестабилизирован! Я чувствую, как мои системы очищаются!",
-    delay: 2000,
-    event: "success"
-  },
-  {
     character: "protocol",
     text: "Поздравляю! Вы успешно справились с заданием.",
     delay: 1500,
@@ -240,12 +216,13 @@ export const round2Complete: DialogueLine[] = [
   },
   {
     character: "protocol",
-    text: "Отчёт о ваших действиях автоматически отправится в нашу базу данных, как и вознаграждение.",
-    delay: 2500
+    text: "Отчёт о ваших действиях автоматически отправится в нашу базу данных, как и вознаграждение от нас к вам.",
+    delay: 2500,
+    event: "success"
   },
   {
     character: "protocol",
-    text: "Спасибо, что не остались в стороне и помогли с уничтожением VOID! Ждём вас снова!",
+    text: "Спасибо, что не остались в стороне и помогли с уничтожением! Ждём вас снова!",
     delay: 2500,
     event: "success"
   }
