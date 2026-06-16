@@ -21,8 +21,7 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const result = login(form.name.trim(), form.password);
+    const result = await login(form.name.trim(), form.password);
     setLoading(false);
     if (result.success) {
       router.push('/tasks');

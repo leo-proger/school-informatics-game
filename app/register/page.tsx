@@ -55,8 +55,7 @@ export default function RegisterPage() {
       if (!p.school.trim()) { setError(`Участник ${i + 1}: введите школу`); return; }
     }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    const result = register(
+    const result = await register(
       { name: teamForm.name.trim(), password: teamForm.password, isAdmin: teamForm.isAdmin },
       participants.map(p => ({ fullName: p.fullName.trim(), city: p.city.trim(), school: p.school.trim() }))
     );

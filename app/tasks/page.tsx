@@ -1,409 +1,178 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Background from "@/app/components/layout/Background";
-import TopHUD from "@/app/components/layout/TopHUD";
-import TaskMap, { TaskNode } from "@/app/components/tasks/TaskMap";
-import PuzzleModal from "@/app/components/tasks/PuzzleModal";
-import DialogueBox from "@/app/components/dialogue/DialogueBox";
 import GlassPanel from "@/app/components/ui/GlassPanel";
 import NeonButton from "@/app/components/ui/NeonButton";
-import { getCharacter } from "@/app/lib/characters";
-import { round1Tasks, getTask, checkAnswer } from "@/app/data/tasks-round1";
-import { getBossTask, checkBossAnswer } from "@/app/data/tasks-round2";
-import { prologue, round1Complete, round2Start, round2Complete, taskDialogs } from "@/app/data/dialogues";
+import { SAVE_KEY } from "./round1/page";
 
-
-function generateNodes(
-  tasks: typeof round1Tasks,
-  completed: string[],
-  activeId: string | null
-): TaskNode[] {
-  return tasks.map((task, index) => {
-    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id);
-
-    return {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      x: 15 + (index % 3) * 30,
-      y: 20 + Math.floor(index / 3) * 30,
-      active: task.id === activeId && isUnlocked,
-      completed: completed.includes(task.id),
-      locked: !isUnlocked && !completed.includes(task.id),
-    };
-  });
-}
-
-export default function HomePage() {
-  // Фазы игры
-  const [phase, setPhase] = useState<"video" | "prologue" | "round1" | "taskDialogue" | "round1Complete" | "round2Code" | "round2Dialogue" | "round2Boss" | "victory">("video");
-
-  // Пролог
-  const [prologueIndex, setPrologueIndex] = useState(0);
-
-  // Тур 1
-  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
-  const [activeTaskId, setActiveTaskId] = useState<string>(round1Tasks[0].id);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
-  const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
-  const [taskDialogIndex, setTaskDialogIndex] = useState(0);
-
-  // Тур 2
-  const [accessCode, setAccessCode] = useState("");
-  const [round2DialogueIndex, setRound2DialogueIndex] = useState(0);
-  const [bossTask, setBossTask] = useState<any>(null);
-  const [r1cIdx, setR1cIdx] = useState(0);
-
-  // Победа
-  const [victoryIndex, setVictoryIndex] = useState(0);
-  const [showVictoryOverlay, setShowVictoryOverlay] = useState(false);
-
-  // Обработчик выполнения задания
-  const handleTaskSubmit = useCallback((value: string) => {
-    const task = getTask(activeTaskId);
-    if (!task) return false;
-
-    const isCorrect = checkAnswer(task, value);
-
-    if (isCorrect) {
-      const newCompleted = [...completedTasks, activeTaskId];
-      setCompletedTasks(newCompleted);
-
-      const word = "ФЕНИКС";
-      const nextLetter = word[newCompleted.length - 1];
-      setCollectedLetters([...collectedLetters, nextLetter || "?"]);
-
-      // Проверяем завершение тура
-      if (newCompleted.length >= round1Tasks.length) {
-  setPhase("round1Complete");
-  setActiveTaskId("");
-} else {
-  const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id));
-  if (nextTask) {
-    // Показываем диалог перед следующей задачей
-    setPendingTaskId(nextTask.id);
-    setTaskDialogIndex(0);
-    setPhase("taskDialogue");
-  }
-}
-    }
-
-    setModalOpen(false);
-    return isCorrect;
-  }, [activeTaskId, completedTasks, collectedLetters]);
-
-  const handleBossSubmit = useCallback((value: string) => {
-    if (!bossTask) return false;
-    const correct = checkBossAnswer(bossTask, value);
-    if (correct) {
-      setPhase("victory");
-    }
-    return correct;
-  }, [bossTask]);
-
-  // ==================== РЕНДЕР ====================
-
-if (phase === "video") {
-  return (
-    <div className="relative min-h-screen flex items-center justify-center bg-black">
-      <video
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        muted
-        onEnded={() => setPhase("prologue")}
-      >
-        <source src="/videos/promo.mp4" type="video/mp4" />
-        Ваш браузер не поддерживает видео.
-      </video>
-      
-      {/* Опционально: кнопка пропуска */}
-      <button
-        onClick={() => setPhase("prologue")}
-        className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
-      >
-        Пропустить ↓
-      </button>
-    </div>
-  );
-}
-  // Пролог
-  if (phase === "prologue") {
-    const line = prologue[prologueIndex];
-    const character = getCharacter(line.character);
-
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={0} letters={[]} title="BOOT SEQUENCE" />
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color={character.color}
-          text={line.text}
-          onNext={() => {
-            if (prologueIndex < prologue.length - 1) {
-              setPrologueIndex(prologueIndex + 1);
-            } else {
-              setPhase("round1");
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  // Тур 1 — Задания
-  if (phase === "round1") {
-    const nodes = generateNodes(round1Tasks, completedTasks, activeTaskId);
-    const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
-
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={progress} letters={collectedLetters} title="ROUND 1 • NEXUS" />
-
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
-          <div className="w-full max-w-[1700px]">
-            <TaskMap
-              tasks={nodes}
-              onSelect={(id) => {
-                const node = nodes.find(n => n.id === id);
-                if (node && !node.locked) {
-                  setActiveTaskId(id);
-                  setModalOpen(true);
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        <PuzzleModal
-          open={modalOpen}
-          title={activeTaskId ? getTask(activeTaskId)?.title ?? "" : ""}
-          description={activeTaskId ? getTask(activeTaskId)?.description ?? "" : ""}
-          onClose={() => setModalOpen(false)}
-          onSubmit={handleTaskSubmit}
-          timeLimit={activeTaskId ? getTask(activeTaskId)?.timeLimit : undefined}
-        />
-      </div>
-    );
-  }
-// Диалог между задачами
-if (phase === "taskDialogue" && pendingTaskId) {
-  const dialogLines = taskDialogs[pendingTaskId];
-  
-  // Если диалога нет для этой задачи — сразу открываем задачу
-  if (!dialogLines || dialogLines.length === 0) {
-    setActiveTaskId(pendingTaskId);
-    setPendingTaskId(null);
-    setPhase("round1");
-    setModalOpen(true);
+function getSaveLabel(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw);
+    const phase: string = data.phase ?? "";
+    const completed: string[] = data.completedTasks ?? [];
+    if (phase === "victory") return "Финал пройден";
+    if (phase === "round2Boss" || phase === "round2Dialogue") return "Тур 2 — финальный босс";
+    if (phase === "round2Code") return "Тур 2 — ввод кода";
+    if (phase === "round1Complete") return "Тур 1 завершён";
+    if (phase === "round1" || phase === "taskDialogue")
+      return `Тур 1 — задание ${completed.length + 1}`;
+    if (phase === "prologue" || phase === "video") return "Вступление";
+    return null;
+  } catch {
     return null;
   }
-  
-  const currentLine = dialogLines[taskDialogIndex];
-  const character = getCharacter(currentLine.character);
-  const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
-  
+}
+
+export default function TasksPage() {
+  const router = useRouter();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [saveLabel, setSaveLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(SAVE_KEY);
+    setSaveLabel(getSaveLabel(raw));
+  }, []);
+
+  const handleContinue = () => {
+    router.push("/tasks/round1");
+  };
+
+  const handleFresh = () => {
+    localStorage.removeItem(SAVE_KEY);
+    router.push("/tasks/round1");
+  };
+
   return (
     <div className="relative min-h-screen">
       <Background />
-      <TopHUD progress={progress} letters={collectedLetters} title="NEW TASK" />
-      <DialogueBox
-        speaker={character.name}
-        avatar={character.avatarPlaceholder}
-        color={character.color}
-        text={currentLine.text}
-        onNext={() => {
-          if (taskDialogIndex < dialogLines.length - 1) {
-            setTaskDialogIndex(taskDialogIndex + 1);
-          } else {
-            // Диалог закончен — открываем задачу
-            setActiveTaskId(pendingTaskId);
-            setPendingTaskId(null);
-            setPhase("round1");
-            setModalOpen(true);
-          }
-        }}
-      />
-    </div>
-  );
-}
-  // Завершение тура 1
-  if (phase === "round1Complete") {
-    if (r1cIdx >= round1Complete.length) {
-      setPhase("round2Code");
-      setR1cIdx(0);
-      return null;
-    }
 
-    const currentLine = round1Complete[r1cIdx];
-    const character = getCharacter(currentLine.character);
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <p className="text-xs tracking-[0.4em] text-cyan-400 uppercase font-mono mb-3">/ВЫБОР ТУРА/</p>
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-2">
+            ПРОТОКОЛ{" "}
+            <span className="text-cyan-300" style={{ textShadow: "0 0 20px rgba(34,211,238,0.6)" }}>
+              ФЕНИКС
+            </span>
+          </h1>
+          <p className="text-slate-400 font-mono text-sm mt-3">Выберите тур для прохождения</p>
+        </div>
 
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={100} letters={collectedLetters} title="ROUND 1 COMPLETE" />
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color={character.color}
-          text={currentLine.text}
-          onNext={() => {
-            if (r1cIdx < round1Complete.length - 1) {
-              setR1cIdx(r1cIdx + 1);
-            } else {
-              setPhase("round2Code");
-              setR1cIdx(0);
-            }
-          }}
-        />
-      </div>
-    );
-  }
+        {/* Tour cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl w-full">
+          {/* Tour 1 */}
+          <div onClick={() => setShowConfirm(true)} className="group cursor-pointer">
+            <GlassPanel className="p-8 flex flex-col items-center text-center hover:border-cyan-400/60 transition-all duration-300 h-full">
+              <div className="w-16 h-16 rounded-full border-2 border-cyan-400/50 flex items-center justify-center mb-5
+                group-hover:border-cyan-300 group-hover:shadow-[0_0_24px_rgba(34,211,238,0.4)] transition-all duration-300">
+                <span className="text-2xl font-black text-cyan-300">1</span>
+              </div>
+              <h2 className="text-xl font-bold text-white tracking-wide mb-2">ТУР 1</h2>
+              <p className="text-xs text-cyan-400 tracking-widest uppercase font-mono mb-4">NEXUS PROTOCOL</p>
+              <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                Расшифруйте данные, найдите уязвимости вируса VOID и соберите ключ доступа.
+              </p>
+              {saveLabel ? (
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2 text-xs font-mono text-yellow-400">
+                    <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.8)]" />
+                    СОХРАНЕНИЕ НАЙДЕНО
+                  </div>
+                  <span className="text-xs text-slate-500 font-mono">{saveLabel}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs font-mono text-green-400">
+                  <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+                  ДОСТУПНО
+                </div>
+              )}
+            </GlassPanel>
+          </div>
 
-  // Тур 2 — Ввод кода
-  if (phase === "round2Code") {
-    const expectedCode = collectedLetters.join("");
-
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={50} letters={collectedLetters} title="ACCESS CODE" />
-
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
-          <GlassPanel className="p-12 max-w-2xl w-full text-center">
-            <h2 className="text-3xl text-yellow-300 font-bold mb-4">ВВЕДИТЕ КОД ДОСТУПА</h2>
-            <p className="text-gray-400 mb-6">
-              Собранные буквы: <span className="text-yellow-300 font-bold tracking-[8px]">{collectedLetters.join(" ")}</span>
+          {/* Tour 2 — locked */}
+          <GlassPanel className="p-8 flex flex-col items-center text-center opacity-50 cursor-not-allowed border-gray-700/40">
+            <div className="w-16 h-16 rounded-full border-2 border-gray-600/40 flex items-center justify-center mb-5">
+              <svg className="w-7 h-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M16.5 10.5V7.5a4.5 4.5 0 00-9 0v3M5.25 10.5h13.5a.75.75 0 01.75.75v8.25a.75.75 0 01-.75.75H5.25a.75.75 0 01-.75-.75V11.25a.75.75 0 01.75-.75z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-400 tracking-wide mb-2">ТУР 2</h2>
+            <p className="text-xs text-gray-500 tracking-widest uppercase font-mono mb-4">VOID PROTOCOL</p>
+            <p className="text-gray-600 text-sm leading-relaxed mb-6">
+              Финальное столкновение с VOID. Требуется завершить Тур 1.
             </p>
-
-            <input
-              type="text"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-              className="w-full bg-black/60 border border-yellow-500/30 p-4 text-yellow-300 text-2xl text-center outline-none mb-6 tracking-[8px]"
-              placeholder="ВВЕДИТЕ КОД"
-            />
-
-            <NeonButton
-              color="cyan"
-              onClick={() => {
-                if (accessCode === expectedCode) {
-                  setPhase("round2Dialogue");
-                  setAccessCode("");
-                  setRound2DialogueIndex(0);
-                }
-              }}
-              className="text-xl px-8 py-4"
-            >
-              ПОДТВЕРДИТЬ
-            </NeonButton>
+            <div className="flex items-center gap-2 text-xs font-mono text-gray-600">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+              </svg>
+              ЗАБЛОКИРОВАНО
+            </div>
           </GlassPanel>
         </div>
       </div>
-    );
-  }
 
-  // Тур 2 — Диалог перед боссом
-  if (phase === "round2Dialogue") {
-    if (round2DialogueIndex >= round2Start.length) {
-      const task = getBossTask(1);
-      setBossTask(task);
-      setPhase("round2Boss");
-      return null;
-    }
-
-    const line = round2Start[round2DialogueIndex];
-    const character = getCharacter(line.character);
-
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={75} letters={collectedLetters} title="FINAL BATTLE" />
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color={character.color}
-          text={line.text}
-          onNext={() => {
-            if (round2DialogueIndex < round2Start.length - 1) {
-              setRound2DialogueIndex(round2DialogueIndex + 1);
-            } else {
-              const task = getBossTask(1);
-              setBossTask(task);
-              setPhase("round2Boss");
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  // Тур 2 — Босс
-  if (phase === "round2Boss" && bossTask) {
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={75} letters={collectedLetters} title="VOID BOSS" />
-
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
-          <PuzzleModal
-            open={true}
-            title={bossTask.title}
-            description={bossTask.description}
-            hint={bossTask.hint}
-            timeLimit={bossTask.timeLimit}
-            onClose={() => {}}
-            onSubmit={handleBossSubmit}
-          />
+      {/* Confirmation modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <GlassPanel className="p-10 max-w-md w-full text-center">
+            {saveLabel ? (
+              <>
+                <div className="w-14 h-14 rounded-full border border-yellow-400/40 bg-yellow-500/10 flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-7 h-7 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Найдено сохранение</h3>
+                <p className="text-slate-400 text-sm font-mono mb-2 leading-relaxed">
+                  <span className="text-yellow-300">{saveLabel}</span>
+                </p>
+                <p className="text-slate-500 text-xs font-mono mb-8">Продолжить с места остановки или начать заново?</p>
+                <div className="flex flex-col gap-3">
+                  <NeonButton color="cyan" onClick={handleContinue} className="w-full justify-center">
+                    ПРОДОЛЖИТЬ
+                  </NeonButton>
+                  <NeonButton color="red" onClick={handleFresh} className="w-full justify-center">
+                    НАЧАТЬ ЗАНОВО
+                  </NeonButton>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="text-xs text-slate-500 hover:text-slate-300 transition-colors mt-1"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-14 h-14 rounded-full border border-cyan-400/40 bg-cyan-500/10 flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-7 h-7 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Начать игру?</h3>
+                <p className="text-slate-400 text-sm font-mono mb-8 leading-relaxed">
+                  Вы начнёте <span className="text-cyan-300">Тур 1 — NEXUS Protocol</span>.<br />
+                  Таймер запустится сразу после старта.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <NeonButton color="cyan" onClick={handleFresh}>
+                    НАЧАТЬ
+                  </NeonButton>
+                  <NeonButton color="red" onClick={() => setShowConfirm(false)}>
+                    ОТМЕНА
+                  </NeonButton>
+                </div>
+              </>
+            )}
+          </GlassPanel>
         </div>
-      </div>
-    );
-  }
-
-  // Победа
-  if (phase === "victory") {
-    if (victoryIndex >= round2Complete.length) {
-      if (!showVictoryOverlay) {
-        setShowVictoryOverlay(true);
-      }
-      return (
-        <div className="relative min-h-screen">
-          <Background />
-          <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className="text-center">
-              <h1 className="text-8xl font-bold text-yellow-300 animate-pulse mb-8">
-                ПОБЕДА!
-              </h1>
-              <p className="text-2xl text-yellow-200">
-                VOID уничтожен. NEXUS очищен.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const line = round2Complete[victoryIndex];
-    const character = getCharacter(line.character);
-
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color={character.color}
-          text={line.text}
-          onNext={() => setVictoryIndex(victoryIndex + 1)}
-        />
-      </div>
-    );
-  }
-
-  return null;
+      )}
+    </div>
+  );
 }
