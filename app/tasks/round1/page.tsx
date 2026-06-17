@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Background from "@/app/components/layout/Background";
 import TopHUD from "@/app/components/layout/TopHUD";
 import TaskMap, { TaskNode } from "@/app/components/tasks/TaskMap";
@@ -9,38 +10,43 @@ import GlassPanel from "@/app/components/ui/GlassPanel";
 import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
 import { round1Tasks, getTask, checkAnswer } from "@/app/data/tasks-round1";
-import { getBossTask, checkBossAnswer } from "@/app/data/tasks-round2";
-import { prologue, round1Complete, round2Start, round2Complete, taskDialogs } from "@/app/data/dialogues";
+import { prologue, round1Complete, taskDialogs } from "@/app/data/dialogues";
 
 export const SAVE_KEY = "phoenix_round1_progress";
 
 type Phase =
   | "video" | "prologue" | "round1" | "taskDialogue"
-  | "round1Complete" | "round2Code" | "round2Dialogue" | "round2Boss" | "victory";
+  | "round1Complete" | "round1Code";
 
 function generateNodes(
   tasks: typeof round1Tasks,
   completed: string[],
+  failed: string[],
   activeId: string | null
 ): TaskNode[] {
   return tasks.map((task, index) => {
-    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id);
+    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id) || failed.includes(tasks[index - 1].id);
+    const isFailed = failed.includes(task.id);
+    const isCompleted = completed.includes(task.id);
+    
     return {
       id: task.id,
       title: task.title,
       description: task.description,
       x: 15 + (index % 3) * 30,
       y: 20 + Math.floor(index / 3) * 30,
-      active: task.id === activeId && isUnlocked,
-      completed: completed.includes(task.id),
-      locked: !isUnlocked && !completed.includes(task.id),
+      active: task.id === activeId && isUnlocked && !isFailed && !isCompleted,
+      completed: isCompleted,
+      locked: !isUnlocked,
+      failed: isFailed,
     };
   });
 }
 
 export default function Round1Page() {
+  const router = useRouter();
   const [loaded, setLoaded] = useState(false);
-
+  const [failedTasks, setFailedTasks] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>("video");
   const [prologueIndex, setPrologueIndex] = useState(0);
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
@@ -49,12 +55,8 @@ export default function Round1Page() {
   const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [taskDialogIndex, setTaskDialogIndex] = useState(0);
-  const [accessCode, setAccessCode] = useState("");
-  const [round2DialogueIndex, setRound2DialogueIndex] = useState(0);
-  const [bossTask, setBossTask] = useState<any>(null);
   const [r1cIdx, setR1cIdx] = useState(0);
-  const [victoryIndex, setVictoryIndex] = useState(0);
-  const [showVictoryOverlay, setShowVictoryOverlay] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
 
   // Загрузка сохранения при монтировании
   useEffect(() => {
@@ -62,26 +64,22 @@ export default function Round1Page() {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        const savedPhase: Phase = data.phase === "video" ? "prologue" : (data.phase ?? "prologue");
-        setPhase(savedPhase);
+        setPhase(data.phase === "video" ? "prologue" : (data.phase ?? "prologue"));
         setPrologueIndex(data.prologueIndex ?? 0);
         setCompletedTasks(data.completedTasks ?? []);
         setActiveTaskId(data.activeTaskId ?? round1Tasks[0].id);
         setCollectedLetters(data.collectedLetters ?? []);
         setPendingTaskId(data.pendingTaskId ?? null);
         setTaskDialogIndex(data.taskDialogIndex ?? 0);
-        setRound2DialogueIndex(data.round2DialogueIndex ?? 0);
         setR1cIdx(data.r1cIdx ?? 0);
-        setVictoryIndex(data.victoryIndex ?? 0);
-        if (savedPhase === "round2Boss" || savedPhase === "round2Dialogue") {
-          setBossTask(getBossTask(1));
-        }
+        setFailedTasks(data.failedTasks ?? []);
+        setAccessCode(data.accessCode ?? "");
       }
     } catch {}
     setLoaded(true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Автосохранение при изменении ключевых состояний
+  // Автосохранение
   useEffect(() => {
     if (!loaded) return;
     try {
@@ -93,14 +91,14 @@ export default function Round1Page() {
         collectedLetters,
         pendingTaskId,
         taskDialogIndex,
-        round2DialogueIndex,
         r1cIdx,
-        victoryIndex,
+        failedTasks,
+        accessCode,
         savedAt: new Date().toISOString(),
       }));
     } catch {}
   }, [loaded, phase, prologueIndex, completedTasks, activeTaskId, collectedLetters,
-      pendingTaskId, taskDialogIndex, round2DialogueIndex, r1cIdx, victoryIndex]);
+      pendingTaskId, taskDialogIndex, r1cIdx, failedTasks, accessCode]);
 
   const handleTaskSubmit = useCallback((value: string) => {
     const task = getTask(activeTaskId);
@@ -114,33 +112,30 @@ export default function Round1Page() {
 
       const word = "ФЕНИКС";
       const nextLetter = word[newCompleted.length - 1];
-      setCollectedLetters(prev => [...prev, nextLetter || "?"]);
+      const newLetters = [...collectedLetters, nextLetter || "?"];
+      setCollectedLetters(newLetters);
+      
+      // Сохраняем буквы для второго тура
+      localStorage.setItem("collectedLetters", JSON.stringify(newLetters));
 
       if (newCompleted.length >= round1Tasks.length) {
         setPhase("round1Complete");
         setActiveTaskId("");
       } else {
-        const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id));
+        const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id) && !failedTasks.includes(t.id));
         if (nextTask) {
           setPendingTaskId(nextTask.id);
           setTaskDialogIndex(0);
           setPhase("taskDialogue");
         }
       }
+    } else {
+      setFailedTasks(prev => [...prev, activeTaskId]);
     }
 
-    setModalOpen(false);
     return isCorrect;
-  }, [activeTaskId, completedTasks]);
+  }, [activeTaskId, completedTasks, failedTasks, collectedLetters]);
 
-  const handleBossSubmit = useCallback((value: string) => {
-    if (!bossTask) return false;
-    const correct = checkBossAnswer(bossTask, value);
-    if (correct) setPhase("victory");
-    return correct;
-  }, [bossTask]);
-
-  // Пока грузимся — не рендерим ничего (избегаем вспышки видео)
   if (!loaded) {
     return (
       <div className="fixed inset-0 bg-[#050816] flex items-center justify-center">
@@ -189,7 +184,9 @@ export default function Round1Page() {
             if (prologueIndex < prologue.length - 1) {
               setPrologueIndex(prologueIndex + 1);
             } else {
-              setPhase("round1");
+              setPendingTaskId(round1Tasks[0].id);
+              setTaskDialogIndex(0);
+              setPhase("taskDialogue");
             }
           }}
         />
@@ -198,7 +195,7 @@ export default function Round1Page() {
   }
 
   if (phase === "round1") {
-    const nodes = generateNodes(round1Tasks, completedTasks, activeTaskId);
+    const nodes = generateNodes(round1Tasks, completedTasks, failedTasks, activeTaskId);
     const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
     return (
       <div className="relative min-h-screen">
@@ -211,8 +208,14 @@ export default function Round1Page() {
               onSelect={(id) => {
                 const node = nodes.find(n => n.id === id);
                 if (node && !node.locked) {
-                  setActiveTaskId(id);
-                  setModalOpen(true);
+                  if (!completedTasks.includes(id) && !failedTasks.includes(id)) {
+                    setPendingTaskId(id);
+                    setTaskDialogIndex(0);
+                    setPhase("taskDialogue");
+                  } else {
+                    setActiveTaskId(id);
+                    setModalOpen(true);
+                  }
                 }
               }}
             />
@@ -222,9 +225,12 @@ export default function Round1Page() {
           open={modalOpen}
           title={activeTaskId ? getTask(activeTaskId)?.title ?? "" : ""}
           description={activeTaskId ? getTask(activeTaskId)?.description ?? "" : ""}
+          hint={activeTaskId ? getTask(activeTaskId)?.hint : ""}
           onClose={() => setModalOpen(false)}
           onSubmit={handleTaskSubmit}
           timeLimit={activeTaskId ? getTask(activeTaskId)?.timeLimit : undefined}
+          isCompleted={activeTaskId ? completedTasks.includes(activeTaskId) : false}
+          isFailed={activeTaskId ? failedTasks.includes(activeTaskId) : false}
         />
       </div>
     );
@@ -239,6 +245,7 @@ export default function Round1Page() {
       setModalOpen(true);
       return null;
     }
+
     const currentLine = dialogLines[taskDialogIndex];
     const character = getCharacter(currentLine.character);
     const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
@@ -255,8 +262,9 @@ export default function Round1Page() {
             if (taskDialogIndex < dialogLines.length - 1) {
               setTaskDialogIndex(taskDialogIndex + 1);
             } else {
-              setActiveTaskId(pendingTaskId);
+              const taskId = pendingTaskId;
               setPendingTaskId(null);
+              setActiveTaskId(taskId);
               setPhase("round1");
               setModalOpen(true);
             }
@@ -268,10 +276,12 @@ export default function Round1Page() {
 
   if (phase === "round1Complete") {
     if (r1cIdx >= round1Complete.length) {
-      setPhase("round2Code");
+      // После диалогов — переход к вводу кода
+      setPhase("round1Code");
       setR1cIdx(0);
       return null;
     }
+
     const currentLine = round1Complete[r1cIdx];
     const character = getCharacter(currentLine.character);
     return (
@@ -287,7 +297,7 @@ export default function Round1Page() {
             if (r1cIdx < round1Complete.length - 1) {
               setR1cIdx(r1cIdx + 1);
             } else {
-              setPhase("round2Code");
+              setPhase("round1Code");
               setR1cIdx(0);
             }
           }}
@@ -296,125 +306,62 @@ export default function Round1Page() {
     );
   }
 
-  if (phase === "round2Code") {
+  // ============ ВВОД КОДА (в конце 1 тура) ============
+  if (phase === "round1Code") {
     const expectedCode = collectedLetters.join("");
+
     return (
       <div className="relative min-h-screen">
         <Background />
-        <TopHUD progress={50} letters={collectedLetters} title="ACCESS CODE" />
+        <TopHUD progress={100} letters={collectedLetters} title="ACCESS CODE" />
         <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
           <GlassPanel className="p-12 max-w-2xl w-full text-center">
             <h2 className="text-3xl text-yellow-300 font-bold mb-4">ВВЕДИТЕ КОД ДОСТУПА</h2>
-            <p className="text-gray-400 mb-6">
-              Собранные буквы: <span className="text-yellow-300 font-bold tracking-[8px]">{collectedLetters.join(" ")}</span>
+            <p className="text-gray-400 mb-2">
+              Собранные буквы: 
+              <span className="text-yellow-300 font-bold tracking-[8px] ml-2">
+                {collectedLetters.join(" ")}
+              </span>
+            </p>
+            <p className="text-gray-500 text-sm mb-6">
+              Введите код, чтобы подтвердить завершение Тура 1
             </p>
             <input
               type="text"
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-              className="w-full bg-black/60 border border-yellow-500/30 p-4 text-yellow-300 text-2xl text-center outline-none mb-6 tracking-[8px]"
+              className="w-full bg-black/60 border border-yellow-500/30 p-4 text-yellow-300 text-2xl text-center outline-none mb-6 tracking-[8px] focus:border-yellow-500 transition-colors"
               placeholder="ВВЕДИТЕ КОД"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (accessCode === expectedCode) {
+                    // Код верный — переходим на страницу выбора тура
+                    localStorage.setItem("round1Completed", "true");
+                    router.push("/tasks");
+                  }
+                }
+              }}
             />
             <NeonButton
               color="cyan"
               onClick={() => {
                 if (accessCode === expectedCode) {
-                  setPhase("round2Dialogue");
-                  setAccessCode("");
-                  setRound2DialogueIndex(0);
+                  localStorage.setItem("round1Completed", "true");
+                  router.push("/tasks");
                 }
               }}
-              className="text-xl px-8 py-4"
+              className="text-xl px-8 py-4 w-full"
             >
               ПОДТВЕРДИТЬ
             </NeonButton>
+            {accessCode && accessCode !== expectedCode && (
+              <p className="text-red-400 text-sm mt-4 animate-pulse">
+                ❌ Неверный код. Попробуйте снова.
+              </p>
+            )}
           </GlassPanel>
         </div>
-      </div>
-    );
-  }
-
-  if (phase === "round2Dialogue") {
-    if (round2DialogueIndex >= round2Start.length) {
-      const task = getBossTask(1);
-      setBossTask(task);
-      setPhase("round2Boss");
-      return null;
-    }
-    const line = round2Start[round2DialogueIndex];
-    const character = getCharacter(line.character);
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={75} letters={collectedLetters} title="FINAL BATTLE" />
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color={character.color}
-          text={line.text}
-          onNext={() => {
-            if (round2DialogueIndex < round2Start.length - 1) {
-              setRound2DialogueIndex(round2DialogueIndex + 1);
-            } else {
-              const task = getBossTask(1);
-              setBossTask(task);
-              setPhase("round2Boss");
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (phase === "round2Boss" && bossTask) {
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={75} letters={collectedLetters} title="VOID BOSS" />
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
-          <PuzzleModal
-            open={true}
-            title={bossTask.title}
-            description={bossTask.description}
-            hint={bossTask.hint}
-            timeLimit={bossTask.timeLimit}
-            onClose={() => {}}
-            onSubmit={handleBossSubmit}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === "victory") {
-    if (victoryIndex >= round2Complete.length) {
-      if (!showVictoryOverlay) setShowVictoryOverlay(true);
-      return (
-        <div className="relative min-h-screen">
-          <Background />
-          <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className="text-center">
-              <h1 className="text-8xl font-bold text-yellow-300 animate-pulse mb-8">ПОБЕДА!</h1>
-              <p className="text-2xl text-yellow-200">VOID уничтожен. NEXUS очищен.</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    const line = round2Complete[victoryIndex];
-    const character = getCharacter(line.character);
-    return (
-      <div className="relative min-h-screen">
-        <Background />
-        <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color={character.color}
-          text={line.text}
-          onNext={() => setVictoryIndex(victoryIndex + 1)}
-        />
       </div>
     );
   }

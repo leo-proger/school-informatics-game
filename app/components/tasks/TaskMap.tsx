@@ -11,6 +11,7 @@ export interface TaskNode {
   active: boolean;
   completed: boolean;
   locked: boolean;
+  failed?: boolean;
 }
 
 interface Props {
@@ -67,6 +68,7 @@ export default function TaskMap({ tasks, onSelect }: Props) {
             active={task.active}
             completed={task.completed}
             locked={task.locked}
+            failed={task.failed || false}
             onClick={() => onSelect(task.id)}
           />
         </div>
