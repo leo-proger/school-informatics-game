@@ -24,18 +24,18 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-purple-500/20 backdrop-blur-md"
-      style={{ background: 'rgba(6, 6, 15, 0.85)' }}>
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-cyan-500/20 backdrop-blur-md"
+      style={{ background: 'rgba(5, 8, 22, 0.88)' }}>
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded border border-purple-500/50 flex items-center justify-center
-            group-hover:border-purple-400 group-hover:shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-300">
-            <span className="text-purple-300 font-bold text-sm">Ф</span>
+          <div className="w-8 h-8 rounded border border-cyan-500/40 flex items-center justify-center
+            group-hover:border-cyan-400 group-hover:shadow-[0_0_10px_rgba(34,211,238,0.5)] transition-all duration-300">
+            <span className="text-cyan-300 font-bold text-sm">Ф</span>
           </div>
-          <span className="font-bold text-sm tracking-widest text-purple-300 uppercase
-            group-hover:text-purple-200 transition-colors hidden sm:block">
-            Protocol<span className="text-blue-300 ml-1">Phoenix</span>
+          <span className="font-bold text-sm tracking-widest text-cyan-300 uppercase
+            group-hover:text-cyan-200 transition-colors hidden sm:block">
+            Protocol<span className="text-sky-400 ml-1">Phoenix</span>
           </span>
         </Link>
 
@@ -47,8 +47,8 @@ export default function Navbar() {
               href={link.href}
               className={`px-4 py-2 rounded text-sm font-medium tracking-wide transition-all duration-200
                 ${pathname === link.href
-                  ? 'text-purple-300 bg-purple-500/10 border border-purple-500/30'
-                  : 'text-slate-200 hover:text-purple-300 hover:bg-purple-500/8'
+                  ? 'text-cyan-300 bg-cyan-500/10 border border-cyan-500/30'
+                  : 'text-slate-200 hover:text-cyan-300 hover:bg-cyan-500/8'
                 }`}
             >
               {link.label}
@@ -59,7 +59,7 @@ export default function Navbar() {
         {/* Auth */}
         <div className="hidden md:flex items-center gap-3">
           {isLoading ? (
-            <div className="w-24 h-8 rounded bg-purple-500/10 animate-pulse" />
+            <div className="w-24 h-8 rounded bg-cyan-500/10 animate-pulse" />
           ) : team ? (
             <>
               <div className="flex items-center gap-2">
@@ -79,7 +79,7 @@ export default function Navbar() {
           ) : (
             <>
               <Link href="/login"
-                className="px-4 py-1.5 rounded text-sm text-purple-300 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 transition-all duration-200">
+                className="px-4 py-1.5 rounded text-sm text-cyan-300 border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-500/10 transition-all duration-200">
                 Войти
               </Link>
               <Link href="/register"
@@ -93,7 +93,7 @@ export default function Navbar() {
         {/* Mobile menu button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-2 text-slate-300 hover:text-purple-300 transition-colors"
+          className="md:hidden p-2 text-slate-300 hover:text-cyan-300 transition-colors"
         >
           <div className="w-5 h-0.5 bg-current mb-1 transition-all" style={{ transform: menuOpen ? 'rotate(45deg) translate(0px, 6px)' : 'none' }} />
           <div className="w-5 h-0.5 bg-current mb-1 transition-all" style={{ opacity: menuOpen ? 0 : 1 }} />
@@ -103,20 +103,20 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t border-purple-500/20 px-4 py-4 space-y-2"
-          style={{ background: 'rgba(6, 6, 15, 0.95)' }}>
+        <div className="md:hidden border-t border-cyan-500/20 px-4 py-4 space-y-2"
+          style={{ background: 'rgba(5, 8, 22, 0.97)' }}>
           {links.map(link => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMenuOpen(false)}
               className={`block px-3 py-2 rounded text-sm transition-colors
-                ${pathname === link.href ? 'text-purple-300 bg-purple-500/10' : 'text-slate-300 hover:text-purple-300'}`}
+                ${pathname === link.href ? 'text-cyan-300 bg-cyan-500/10' : 'text-slate-300 hover:text-cyan-300'}`}
             >
               {link.label}
             </Link>
           ))}
-          <div className="pt-2 border-t border-purple-500/10 flex flex-col gap-2">
+          <div className="pt-2 border-t border-cyan-500/10 flex flex-col gap-2">
             {team ? (
               <>
                 <span className="text-sm text-slate-300 px-3">{team.name}</span>
@@ -124,8 +124,8 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/login" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-purple-300">Войти</Link>
-                <Link href="/register" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 rounded">Регистрация</Link>
+                <Link href="/login" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-cyan-300">Войти</Link>
+                <Link href="/register" onClick={() => setMenuOpen(false)} className="block px-3 py-2 text-sm text-white bg-gradient-to-r from-cyan-700 to-sky-700 rounded">Регистрация</Link>
               </>
             )}
           </div>

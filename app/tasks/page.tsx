@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Background from "@/app/components/layout/Background";
 import GlassPanel from "@/app/components/ui/GlassPanel";
 import NeonButton from "@/app/components/ui/NeonButton";
+import { useAuth } from "@/app/lib/auth-context";
 import { SAVE_KEY } from "./round1/page";
 
 function getSaveLabel(raw: string | null): string | null {
@@ -27,13 +28,28 @@ function getSaveLabel(raw: string | null): string | null {
 
 export default function TasksPage() {
   const router = useRouter();
+  const { team, isLoading } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
   const [saveLabel, setSaveLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && !team) {
+      router.replace("/login");
+    }
+  }, [team, isLoading, router]);
 
   useEffect(() => {
     const raw = localStorage.getItem(SAVE_KEY);
     setSaveLabel(getSaveLabel(raw));
   }, []);
+
+  if (isLoading || !team) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#050816' }}>
+        <div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleContinue = () => {
     router.push("/tasks/round1");

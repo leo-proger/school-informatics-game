@@ -1,13 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/auth-context';
+import Background from '@/app/components/layout/Background';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, team, isLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && team) {
+      router.replace('/tasks');
+    }
+  }, [team, isLoading, router]);
   const [form, setForm] = useState({ name: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,16 +38,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen cyber-grid flex items-center justify-center px-4 relative overflow-hidden">
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full opacity-40 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
-      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-25 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #2563eb, transparent)' }} />
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+      <Background />
 
       <div className="relative z-10 w-full max-w-md slide-up">
         {/* Header */}
         <div className="text-center mb-8">
-          <p className="text-xs font-mono tracking-[0.4em] text-blue-300 uppercase mb-3">/ПРОТОКОЛ/</p>
+          <p className="text-xs font-mono tracking-[0.4em] text-cyan-400 uppercase mb-3">/ПРОТОКОЛ/</p>
           <h1 className="text-3xl font-black neon-text mb-2">ВХОД В СИСТЕМУ</h1>
           <p className="text-sm text-slate-300">Введите данные вашей команды</p>
         </div>
@@ -49,7 +53,7 @@ export default function LoginPage() {
         <div className="card-glow neon-border rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-mono text-purple-300 uppercase tracking-widest mb-2">
+              <label className="block text-xs font-mono text-cyan-300 uppercase tracking-widest mb-2">
                 Название команды
               </label>
               <input
@@ -63,7 +67,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-mono text-purple-300 uppercase tracking-widest mb-2">
+              <label className="block text-xs font-mono text-cyan-300 uppercase tracking-widest mb-2">
                 Пароль
               </label>
               <input
@@ -100,25 +104,25 @@ export default function LoginPage() {
           <div className="mt-4 text-center">
             <button
               onClick={() => setShowForgot(!showForgot)}
-              className="text-xs text-slate-300 hover:text-purple-300 transition-colors"
+              className="text-xs text-slate-300 hover:text-cyan-300 transition-colors"
             >
               Забыли пароль?
             </button>
           </div>
 
           {showForgot && (
-            <div className="mt-4 p-4 rounded-lg border border-blue-500/20 bg-blue-500/5 text-xs font-mono text-blue-300">
-              <p className="mb-1 text-blue-300">// ВОССТАНОВЛЕНИЕ ДОСТУПА</p>
+            <div className="mt-4 p-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 text-xs font-mono text-cyan-300">
+              <p className="mb-1 text-cyan-400">// ВОССТАНОВЛЕНИЕ ДОСТУПА</p>
               <p className="text-slate-200">Обратитесь к организаторам хакатона по email:</p>
-              <p className="text-blue-300 mt-1">phoenix.corps@nexus-2031.ru</p>
+              <p className="text-cyan-300 mt-1">phoenix.corps@nexus-2031.ru</p>
             </div>
           )}
 
           {/* Divider */}
-          <div className="mt-6 pt-6 border-t border-purple-500/10 text-center">
+          <div className="mt-6 pt-6 border-t border-cyan-500/10 text-center">
             <p className="text-sm text-slate-300">
               Нет команды?{' '}
-              <Link href="/register" className="text-purple-300 hover:text-purple-300 transition-colors">
+              <Link href="/register" className="text-cyan-300 hover:text-cyan-200 transition-colors">
                 Зарегистрироваться
               </Link>
             </p>

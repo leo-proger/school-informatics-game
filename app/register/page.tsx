@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/auth-context';
+import Background from '@/app/components/layout/Background';
 
 interface ParticipantForm {
   fullName: string;
@@ -14,8 +15,14 @@ interface ParticipantForm {
 const emptyParticipant = (): ParticipantForm => ({ fullName: '', city: '', school: '' });
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { register, team, isLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && team) {
+      router.replace('/tasks');
+    }
+  }, [team, isLoading, router]);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [teamForm, setTeamForm] = useState({ name: '', password: '', confirmPassword: '', isAdmin: false });
@@ -64,37 +71,33 @@ export default function RegisterPage() {
       router.push('/tasks');
     } else {
       setError(result.error || 'Ошибка регистрации');
-      setStep(1);
     }
   };
 
   return (
-    <div className="min-h-screen cyber-grid flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      <div className="absolute top-1/3 right-1/3 w-80 h-80 rounded-full opacity-35 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #3b82f6, transparent)' }} />
-      <div className="absolute bottom-1/3 left-1/4 w-72 h-72 rounded-full opacity-35 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <Background />
 
       <div className="relative z-10 w-full max-w-lg slide-up">
         {/* Header */}
         <div className="text-center mb-8">
-          <p className="text-xs font-mono tracking-[0.4em] text-blue-300 uppercase mb-3">/РЕГИСТРАЦИЯ/</p>
+          <p className="text-xs font-mono tracking-[0.4em] text-cyan-400 uppercase mb-3">/РЕГИСТРАЦИЯ/</p>
           <h1 className="text-3xl font-black neon-text mb-2">
             {step === 1 ? 'КОМАНДА' : 'УЧАСТНИКИ'}
           </h1>
           {/* Step indicator */}
           <div className="flex items-center justify-center gap-2 mt-4">
-            <div className={`flex items-center gap-2 ${step >= 1 ? 'text-purple-300' : 'text-slate-400'}`}>
+            <div className={`flex items-center gap-2 ${step >= 1 ? 'text-cyan-300' : 'text-slate-400'}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border
-                ${step === 1 ? 'border-purple-400 bg-purple-500/20' : 'border-purple-600 bg-purple-600/30'}`}>
+                ${step === 1 ? 'border-cyan-400 bg-cyan-500/20' : 'border-cyan-600 bg-cyan-600/30'}`}>
                 {step > 1 ? '✓' : '1'}
               </div>
               <span className="text-xs">Команда</span>
             </div>
-            <div className="w-8 h-px bg-purple-500/30" />
-            <div className={`flex items-center gap-2 ${step >= 2 ? 'text-purple-300' : 'text-slate-400'}`}>
+            <div className="w-8 h-px bg-cyan-500/30" />
+            <div className={`flex items-center gap-2 ${step >= 2 ? 'text-cyan-300' : 'text-slate-400'}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border
-                ${step === 2 ? 'border-purple-400 bg-purple-500/20' : 'border-gray-700 bg-gray-800/30'}`}>
+                ${step === 2 ? 'border-cyan-400 bg-cyan-500/20' : 'border-gray-700 bg-gray-800/30'}`}>
                 2
               </div>
               <span className="text-xs">Участники</span>
@@ -107,7 +110,7 @@ export default function RegisterPage() {
           {step === 1 && (
             <form onSubmit={handleStep1} className="space-y-5">
               <div>
-                <label className="block text-xs font-mono text-purple-300 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-mono text-cyan-300 uppercase tracking-widest mb-2">
                   Название команды
                 </label>
                 <input
@@ -120,7 +123,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-purple-300 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-mono text-cyan-300 uppercase tracking-widest mb-2">
                   Пароль команды
                 </label>
                 <input
@@ -133,7 +136,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-purple-300 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-mono text-cyan-300 uppercase tracking-widest mb-2">
                   Повторите пароль
                 </label>
                 <input
@@ -157,7 +160,7 @@ export default function RegisterPage() {
                   <div className={`w-5 h-5 rounded border transition-all duration-200 flex items-center justify-center
                     ${teamForm.isAdmin
                       ? 'border-yellow-500 bg-yellow-500/20 shadow-[0_0_8px_rgba(234,179,8,0.4)]'
-                      : 'border-gray-600 bg-transparent group-hover:border-gray-400'
+                      : 'border-gray-600 bg-transparent group-hover:border-cyan-600'
                     }`}>
                     {teamForm.isAdmin && <span className="text-yellow-400 text-xs">✓</span>}
                   </div>
@@ -184,14 +187,14 @@ export default function RegisterPage() {
           {step === 2 && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <p className="text-xs font-mono text-slate-300 text-center">
-                Команда: <span className="text-purple-300">{teamForm.name}</span> · {participants.length} участник(а)
+                Команда: <span className="text-cyan-300">{teamForm.name}</span> · {participants.length} участник(а)
               </p>
 
               {participants.map((p, i) => (
-                <div key={i} className="rounded-xl border border-purple-500/15 p-4 space-y-3"
-                  style={{ background: 'rgba(168, 85, 247, 0.04)' }}>
+                <div key={i} className="rounded-xl border border-cyan-500/15 p-4 space-y-3"
+                  style={{ background: 'rgba(34, 211, 238, 0.03)' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-mono text-purple-300 uppercase tracking-widest">
+                    <span className="text-xs font-mono text-cyan-300 uppercase tracking-widest">
                       Участник {i + 1}
                     </span>
                     {participants.length > 1 && (
@@ -232,7 +235,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={addParticipant}
-                  className="w-full py-2.5 rounded-lg border border-dashed border-purple-500/30 text-sm text-purple-400/70 hover:text-purple-300 hover:border-purple-500/50 transition-all duration-200"
+                  className="w-full py-2.5 rounded-lg border border-dashed border-cyan-500/30 text-sm text-cyan-400/70 hover:text-cyan-300 hover:border-cyan-500/50 transition-all duration-200"
                 >
                   + Добавить участника ({participants.length}/5)
                 </button>
@@ -268,10 +271,10 @@ export default function RegisterPage() {
             </form>
           )}
 
-          <div className="mt-6 pt-6 border-t border-purple-500/10 text-center">
+          <div className="mt-6 pt-6 border-t border-cyan-500/10 text-center">
             <p className="text-sm text-slate-300">
               Уже есть команда?{' '}
-              <Link href="/login" className="text-purple-300 hover:text-purple-300 transition-colors">
+              <Link href="/login" className="text-cyan-300 hover:text-cyan-200 transition-colors">
                 Войти
               </Link>
             </p>

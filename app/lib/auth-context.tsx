@@ -159,7 +159,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Ошибка при добавлении участников' };
     }
 
-    const team = rowToTeam(teamRow, participants.map((p, i) => ({ ...p, id: String(i) })));
+    const { data: insertedParticipants } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('team_id', teamRow.id);
+
+    const realParticipants: Participant[] = (insertedParticipants ?? []).map(p => ({
+      id: p.id,
+      fullName: p.full_name,
+      city: p.city,
+      school: p.school,
+    }));
+
+    const team = rowToTeam(teamRow, realParticipants);
     localStorage.setItem(SESSION_KEY, team.id);
     setState({ team, isLoading: false });
     return { success: true };
