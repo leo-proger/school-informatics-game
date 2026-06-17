@@ -1,68 +1,67 @@
-import { GameTask } from "../lib/types";
+// app/data/tasks-round2.ts
 
-export const round2BossTasks: Record<number, GameTask> = {
-  1: {
-    id: "boss-1",
-    title: "VOID: ФИНАЛЬНЫЙ ПРОТОКОЛ (СОЛО)",
-    description: "VOID задаёт последний вопрос:\n'Я — то, что нельзя увидеть, но можно измерить. Я расту, но не живу. Я поглощаю, но не ем. Что я?'",
-    answer: "время",
-    hint: "Оно всегда идёт вперёд",
-    difficulty: "boss",
-    timeLimit: 600,
-    taskNumber: 1
-  },
-  2: {
-    id: "boss-2",
-    title: "VOID: КОЛЛАБОРАТИВНЫЙ ВЗЛОМ (ДУЭТ)",
-    description: "Расшифруйте двойной шифр:\nШаг 1: Цезарь (сдвиг 5)\nШаг 2: Заменить цифры на буквы (1=A, 2=B...)\nЗашифровано: ЙХЧС 9-15-9-20",
-    answer: "void core",
-    hint: "Сначала расшифруйте Цезаря, потом конвертируйте цифры",
-    difficulty: "boss",
-    timeLimit: 900,
-    taskNumber: 2
-  },
-  3: {
-    id: "boss-3",
-    title: "VOID: ТРОЙНАЯ СПИРАЛЬ (ТРИО)",
-    description: "Решите систему:\nX + Y = 15\nY + Z = 20\nX + Z = 17\nНайдите X × Y × Z",
-    answer: "792",
-    hint: "Решите систему уравнений",
-    difficulty: "boss",
-    timeLimit: 900,
-    taskNumber: 3
-  },
-  4: {
-    id: "boss-4",
-    title: "VOID: КВАНТОВЫЙ КОЛЛАПС (4 ЧЕЛ.)",
-    description: "MD5 хеш пароля: 5d41402abc4b2a76b9719d911017c592\nПодсказка: это самое простое слово",
-    answer: "hello",
-    hint: "Попробуйте самые распространённые пароли",
-    difficulty: "boss",
-    timeLimit: 1200,
-    taskNumber: 4
-  },
-  5: {
-    id: "boss-5",
-    title: "VOID: АБСОЛЮТНЫЙ НОЛЬ (5 ЧЕЛ.)",
-    description: "Восстановите алгоритм:\nInput: 7 → Output: 111\nInput: 4 → Output: 100\nInput: 15 → Output: 1111\nInput: 42 → Output: ?",
-    answer: "101010",
-    hint: "Переведите в двоичную систему",
-    difficulty: "boss",
-    timeLimit: 1200,
-    taskNumber: 5
-  }
-};
-
-export function getBossTask(playerCount: number): GameTask | undefined {
-  return round2BossTasks[playerCount];
+export interface Round2Task {
+  id: string;
+  shortTitle: string;
+  fullTitle: string;
+  description: string;
+  options: string[];
+  correctAnswer: string;
+  hint?: string;
 }
 
-export function checkBossAnswer(task: GameTask, input: string): boolean {
-  const normalized = input.trim().toLowerCase();
-  
-  if (Array.isArray(task.answer)) {
-    return task.answer.some(a => a.toLowerCase() === normalized);
+export const round2Tasks: Round2Task[] = [
+  {
+    id: "boss-task-1",
+    shortTitle: "ДЕШИФРОВКА",
+    fullTitle: "КТО ЕБЛАНИЛ?",
+    description: "Дизайнеры долбаëбы, но кто из них ебланил больше всех?",
+    options: ["Все", "Все", "Все", "Все"],
+    correctAnswer: "Все",  // первый "Все" — правильный
+    hint: "💡 Подсказка: их было много, но ответ один — они все ебланилы."
+  },
+  {
+    id: "boss-task-2",
+    shortTitle: "АНАЛИЗ СЕТИ",
+    fullTitle: "КТО ЕБЛАНИЛ? (ЧАСТЬ 2)",
+    description: "А если подумать, может кто-то ебланил сильнее?",
+    options: ["Все", "Все", "Все", "Все"],
+    correctAnswer: "Все",  // второй "Все" — правильный
+    hint: "💡 Подсказка: все, но не все подряд."
+  },
+  {
+    id: "boss-task-3",
+    shortTitle: "ВЗЛОМ ШИФРА",
+    fullTitle: "КТО ЕБЛАНИЛ? (ФИНАЛ)",
+    description: "Ну а если серьезно, кто из дизайнеров ебланил?",
+    options: ["Все", "Все", "Все", "Все"],
+    correctAnswer: "Все",  // третий "Все" — правильный
+    hint: "💡 Подсказка: третий вариант — правильный."
+  },
+  {
+    id: "boss-task-4",
+    shortTitle: "СЛЕДЫ VOID",
+    fullTitle: "КТО ЕБЛАНИЛ? (БОНУС)",
+    description: "Проверка на внимательность: кто из дизайнеров ебланил?",
+    options: ["Все", "Все", "Все", "Все"],
+    correctAnswer: "Все",  // четвёртый "Все" — правильный
+    hint: "💡 Подсказка: последний вариант."
+  },
+  {
+    id: "boss-task-5",
+    shortTitle: "ФИНАЛ",
+    fullTitle: "КТО ЕБЛАНИЛ? (ИТОГ)",
+    description: "Итоговый вопрос: кто из дизайнеров ебланил?",
+    options: ["Евгений", "Диман", "Максим", "Владос"],
+    correctAnswer: "Максим",  // не первый
+    hint: "💡 Подсказка: он главный дизайнер."
   }
-  
-  return task.answer.toLowerCase() === normalized;
+];
+
+export function getBossTask(index: number): Round2Task {
+  return round2Tasks[index] || round2Tasks[0];
+}
+
+export function checkBossAnswer(task: Round2Task, answer: string): boolean {
+  return answer === task.correctAnswer;
 }

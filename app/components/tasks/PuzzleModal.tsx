@@ -14,7 +14,12 @@ interface PuzzleModalProps {
   timeLimit?: number;
   isCompleted?: boolean;
   isFailed?: boolean;
-  isLocked?: boolean; // для заблокированных задач (недоступных)
+  isLocked?: boolean;
+  options?: string[];
+  selectedOption?: string;
+  onOptionSelect?: (option: string) => void;
+  showResult?: "correct" | "wrong" | null;
+  correctAnswer?: string;
 }
 
 export default function PuzzleModal({
@@ -28,6 +33,11 @@ export default function PuzzleModal({
   isCompleted = false,
   isFailed = false,
   isLocked = false,
+  options,
+  selectedOption,
+  onOptionSelect,
+  showResult,
+  correctAnswer,
 }: PuzzleModalProps) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -35,8 +45,23 @@ export default function PuzzleModal({
   const [showHint, setShowHint] = useState(false);
   const [hasAttempted, setHasAttempted] = useState(false);
 
-  // Если задача завершена или провалена — поле ввода заблокировано
   const isReadOnly = isCompleted || isFailed || isLocked;
+  const hasOptions = options && options.length > 0;
+
+  // ✅ Сбрасываем подсказку при смене задания (меняется title)
+  useEffect(() => {
+    setShowHint(false);
+  }, [title]);
+
+  // ✅ Сбрасываем подсказку при закрытии
+  useEffect(() => {
+    if (!open) {
+      setInput("");
+      setStatus("idle");
+      setHasAttempted(false);
+      setShowHint(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!timeLimit || !open || isReadOnly) return;
@@ -57,34 +82,35 @@ export default function PuzzleModal({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "Enter" && !isReadOnly && !hasAttempted) {
+      if (e.key === "Enter" && !isReadOnly && !hasAttempted && !hasOptions) {
         handleSubmit();
       }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [input, isReadOnly, hasAttempted]);
+  }, [input, isReadOnly, hasAttempted, hasOptions]);
 
-const handleSubmit = () => {
-  if (isReadOnly || hasAttempted) return;
-  
-  const result = onSubmit(input);
-  setStatus(result ? "success" : "error");
-  setHasAttempted(true);
-  
-  // ВСЕГДА закрываем через 1.5 секунды, даже при правильном ответе
-  setTimeout(() => {
-    onClose();
-    setStatus("idle");
-    setInput("");
-    setHasAttempted(false);
-  }, 1500);
-};
+  const handleSubmit = () => {
+    if (isReadOnly || hasAttempted) return;
+    
+    const value = hasOptions ? (selectedOption || "") : input;
+    if (!value.trim()) return;
+    
+    const result = onSubmit(value);
+    setStatus(result ? "success" : "error");
+    setHasAttempted(true);
+    
+    setTimeout(() => {
+      onClose();
+      setStatus("idle");
+      setInput("");
+      setHasAttempted(false);
+    }, 1500);
+  };
 
   if (!open) return null;
 
-  // Статусные сообщения
   const getStatusMessage = () => {
     if (isCompleted) return { text: "✓ ЗАДАНИЕ ВЫПОЛНЕНО", className: "text-green-400" };
     if (isFailed) return { text: "✕ ЗАДАНИЕ ПРОВАЛЕНО", className: "text-red-500" };
@@ -96,7 +122,6 @@ const handleSubmit = () => {
 
   const statusMessage = getStatusMessage();
 
-  // Определяем цвет рамки
   const getBorderColor = () => {
     if (isCompleted) return 'border-green-400/30 shadow-[0_0_40px_#00ff0033]';
     if (isFailed) return 'border-red-500/50 shadow-[0_0_60px_#ff000055]';
@@ -104,7 +129,6 @@ const handleSubmit = () => {
     return 'border-cyan-400/30 shadow-[0_0_40px_#00ffff33]';
   };
 
-  // Определяем цвет заголовка
   const getTitleColor = () => {
     if (isCompleted) return 'text-green-400';
     if (isFailed) return 'text-red-500';
@@ -112,7 +136,6 @@ const handleSubmit = () => {
     return 'text-cyan-300';
   };
 
-  // Определяем иконку заголовка
   const getTitleIcon = () => {
     if (isCompleted) return '✅';
     if (isFailed) return '❌';
@@ -157,42 +180,73 @@ const handleSubmit = () => {
             </div>
           )}
 
-          {/* TERMINAL INPUT */}
-          <div className={`bg-black/60 border p-4 font-mono text-cyan-200 mb-4 ${
-            isCompleted ? 'border-green-500/20' : 
-            isFailed ? 'border-red-500/30' : 
-            isLocked ? 'border-gray-500/20' :
-            'border-cyan-500/20'
-          }`}>
-            <div className={`opacity-60 mb-2 ${
-              isCompleted ? 'text-green-400' : 
-              isFailed ? 'text-red-400' : 
-              isLocked ? 'text-gray-500' :
-              ''
-            }`}>
-              {isCompleted ? '✓ ВЫПОЛНЕНО' : 
-               isFailed ? '✕ ПРОВАЛЕНО' : 
-               isLocked ? '🔒 ЗАБЛОКИРОВАНО' : 
-               'INPUT:'}
+          {/* === ВАРИАНТЫ ОТВЕТОВ (для второго тура) === */}
+          {hasOptions ? (
+            <div className="space-y-3 mb-4">
+              {options.map((option, idx) => {
+                const isSelected = selectedOption === option;
+                const isCorrect = showResult === "correct" && option === correctAnswer;
+                const isWrong = showResult === "wrong" && isSelected && option !== correctAnswer;
+                
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => onOptionSelect?.(option)}
+                    disabled={!!showResult || isReadOnly}
+                    className={`
+                      w-full p-4 rounded-lg border text-left transition-all duration-300 font-mono
+                      ${isSelected ? 'border-cyan-400 bg-cyan-500/20' : 'border-gray-700/50 hover:border-cyan-400/50'}
+                      ${isCorrect ? 'border-green-500 bg-green-500/20' : ''}
+                      ${isWrong ? 'border-red-500 bg-red-500/30 animate-shake' : ''}
+                      ${(showResult && option !== correctAnswer && option !== selectedOption) ? 'opacity-50' : ''}
+                      disabled:cursor-not-allowed
+                    `}
+                  >
+                    <span className="text-gray-200">{option}</span>
+                    {isCorrect && <span className="ml-2 text-green-400">✓</span>}
+                    {isWrong && <span className="ml-2 text-red-400">✗</span>}
+                  </button>
+                );
+              })}
             </div>
+          ) : (
+            /* === ПОЛЕ ВВОДА (для первого тура) === */
+            <div className={`bg-black/60 border p-4 font-mono text-cyan-200 mb-4 ${
+              isCompleted ? 'border-green-500/20' : 
+              isFailed ? 'border-red-500/30' : 
+              isLocked ? 'border-gray-500/20' :
+              'border-cyan-500/20'
+            }`}>
+              <div className={`opacity-60 mb-2 ${
+                isCompleted ? 'text-green-400' : 
+                isFailed ? 'text-red-400' : 
+                isLocked ? 'text-gray-500' :
+                ''
+              }`}>
+                {isCompleted ? '✓ ВЫПОЛНЕНО' : 
+                 isFailed ? '✕ ПРОВАЛЕНО' : 
+                 isLocked ? '🔒 ЗАБЛОКИРОВАНО' : 
+                 'INPUT:'}
+              </div>
 
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className={`w-full bg-transparent outline-none ${
-                isCompleted ? 'text-green-400 cursor-not-allowed' : 
-                isFailed ? 'text-red-400 cursor-not-allowed' : 
-                isLocked ? 'text-gray-500 cursor-not-allowed' : 
-                'text-cyan-300'
-              }`}
-              placeholder={isCompleted ? 'Задание выполнено ✓' : 
-                          isFailed ? 'Доступ запрещён ✕' : 
-                          isLocked ? 'Задание недоступно 🔒' : 
-                          'type your answer...'}
-              disabled={isReadOnly || hasAttempted}
-              autoFocus={!isReadOnly}
-            />
-          </div>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className={`w-full bg-transparent outline-none ${
+                  isCompleted ? 'text-green-400 cursor-not-allowed' : 
+                  isFailed ? 'text-red-400 cursor-not-allowed' : 
+                  isLocked ? 'text-gray-500 cursor-not-allowed' : 
+                  'text-cyan-300'
+                }`}
+                placeholder={isCompleted ? 'Задание выполнено ✓' : 
+                            isFailed ? 'Доступ запрещён ✕' : 
+                            isLocked ? 'Задание недоступно 🔒' : 
+                            'type your answer...'}
+                disabled={isReadOnly || hasAttempted}
+                autoFocus={!isReadOnly && !hasOptions}
+              />
+            </div>
+          )}
 
           {/* HINT BUTTON & CONTENT */}
           {hint && !isFailed && !isLocked && (
@@ -249,7 +303,11 @@ const handleSubmit = () => {
             </NeonButton>
 
             {!isReadOnly && !hasAttempted && (
-              <NeonButton color="purple" onClick={handleSubmit}>
+              <NeonButton 
+                color="purple" 
+                onClick={handleSubmit}
+                disabled={hasOptions ? !selectedOption : !input.trim()}
+              >
                 Execute
               </NeonButton>
             )}
