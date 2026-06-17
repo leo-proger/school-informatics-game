@@ -1,3 +1,5 @@
+// app/lib/types.ts
+
 import { CharacterId } from "./characters";
 
 export interface GameTask {
@@ -22,9 +24,14 @@ export interface TaskNode {
   locked: boolean;
 }
 
+// ✅ ТОЛЬКО эмоциональные состояния
+export type CharacterMood = "happy" | "angry" | "mouth-open" | "mouth-closed";
+export type DialogueEvent = "system" | "warning" | "danger" | "success" | "puzzle" | "info";
+
 export interface DialogueLine {
   character: CharacterId;
   text: string;
   delay?: number;
-  event?: "system" | "warning" | "danger" | "success" | "puzzle" | "info";
+  event?: DialogueEvent;
+  mood?: CharacterMood;  // ← Всегда должно быть указано для VOID и ПРОТОКОЛ
 }

@@ -5,13 +5,15 @@ export const prologue: DialogueLine[] = [
     character: "protocol",
     text: "2031 год. Международная цифровая инфраструктура объединена в единую сеть NEXUS.",
     delay: 1000,
-    event: "system"
+    event: "system",
+    mood: "mouth-open"   // ← Рот открыт
   },
   {
     character: "protocol",
     text: "NEXUS обслуживает энергосистемы, транспорт, медицину и архивы знаний 50+ стран.",
     delay: 2000,
-    event: "info"
+    event: "info",
+    mood: "mouth-closed"  // ← Рот закрыт
   },
   {
     character: "nexus",
@@ -35,37 +37,43 @@ export const prologue: DialogueLine[] = [
     character: "protocol",
     text: "Обычные специалисты не справляются. VOID адаптируется к стандартным решениям.",
     delay: 2000,
-    event: "info"
+    event: "info",
+    mood: "mouth-closed"
   },
   {
     character: "protocol",
     text: "Phoenix Corps вербует команды молодых специалистов, которые мыслят нестандартно.",
     delay: 2000,
-    event: "info"
+    event: "info",
+    mood: "mouth-open"
   },
   {
     character: "protocol",
     text: "Вам предстоит расшифровать и уничтожить вирус VOID. Для этого нужно получить код доступа.",
     delay: 2500,
-    event: "puzzle"
+    event: "puzzle",
+    mood: "mouth-closed"
   },
   {
     character: "protocol",
     text: "Код включает несколько букв. Каждую вы получите после расшифровки заданий.",
     delay: 2000,
-    event: "info"
+    event: "info",
+    mood: "mouth-open"
   },
   {
     character: "protocol",
     text: "Вы не сможете уничтожить вирус, если не выполните их все.",
     delay: 2000,
-    event: "warning"
+    event: "warning",
+    mood: "mouth-closed"
   },
   {
     character: "protocol",
     text: "Задание считается пройденным только после уничтожения вируса. Удачи!",
     delay: 2000,
-    event: "success"
+    event: "success",
+    mood: "mouth-open"
   }
 ];
 
@@ -92,13 +100,15 @@ export const round1Start: DialogueLine[] = [
     character: "void",
     text: "...присутствие... обнаружено...",
     delay: 2000,
-    event: "danger"
+    event: "danger",
+    mood: "angry"  // ← Злой VOID
   },
   {
     character: "protocol",
     text: "ВНИМАНИЕ! Вирус засёк ваше проникновение. Работайте быстрее!",
     delay: 2000,
-    event: "danger"
+    event: "danger",
+    mood: "mouth-open"
   }
 ];
 
@@ -107,7 +117,8 @@ export const round1Complete: DialogueLine[] = [
     character: "protocol",
     text: "Поздравляю! Вы восстановили повреждённые файлы и получили буквы, являющиеся частью кода доступа.",
     delay: 2500,
-    event: "success"
+    event: "success",
+    mood: "mouth-open"
   },
   {
     character: "nexus",
@@ -119,45 +130,46 @@ export const round1Complete: DialogueLine[] = [
     character: "protocol",
     text: "Встретимся в следующем туре. Путь к вирусу VOID продолжается!",
     delay: 2000,
-    event: "info"
+    event: "info",
+    mood: "mouth-closed"
   }
 ];
 
 export const taskDialogs: Record<string, DialogueLine[]> = {
   "task-1": [
-    { character: "protocol", text: "Это наши ключи к базам данных, но они все перемешаны. Судя по всему, это шифр Цезаря.", event: "info" },
-    { character: "protocol", text: "Поздравляю! Вы получили первую букву — Ф!", event: "success" }
+    { character: "protocol", text: "Это наши ключи к базам данных, но они все перемешаны. Судя по всему, это шифр Цезаря.", event: "info", mood: "mouth-open" },
+    { character: "protocol", text: "Поздравляю! Вы получили первую букву — Ф!", event: "success", mood: "mouth-closed" }
   ],
   "task-2": [
-    { character: "protocol", text: "Это наши потоки данных, теперь нам ясна причина отсутствия к ним доступа. Они зашифрованы двоичной системой.", event: "info" },
-    { character: "protocol", text: "Отлично! Вторая буква — Е! Доступ к данным возвращён.", event: "success" }
+    { character: "protocol", text: "Это наши потоки данных, теперь нам ясна причина отсутствия к ним доступа. Они зашифрованы двоичной системой.", event: "info", mood: "mouth-closed" },
+    { character: "protocol", text: "Отлично! Вторая буква — Е! Доступ к данным возвращён.", event: "success", mood: "mouth-open" }
   ],
   "task-3": [
-    { character: "protocol", text: "Кажется в этих данных аномалия, причем логическая. Давайте разберёмся с ней!", event: "info" },
-    { character: "protocol", text: "Третья буква — Н! Очень хорошо!", event: "success" }
+    { character: "protocol", text: "Кажется в этих данных аномалия, причем логическая. Давайте разберёмся с ней!", event: "info", mood: "mouth-open" },
+    { character: "protocol", text: "Третья буква — Н! Очень хорошо!", event: "success", mood: "mouth-closed" }
   ],
   "task-4": [
-    { character: "protocol", text: "VOID исказил наш первоначальный код, из-за этого в словах пропадают буквы. Давайте восстановим их!", event: "info" },
-    { character: "protocol", text: "Четвёртая буква — И! Супер!", event: "success" }
+    { character: "protocol", text: "VOID исказил наш первоначальный код, из-за этого в словах пропадают буквы. Давайте восстановим их!", event: "info", mood: "mouth-closed" },
+    { character: "protocol", text: "Четвёртая буква — И! Супер!", event: "success", mood: "mouth-open" }
   ],
   "task-5": [
-    { character: "protocol", text: "Похоже вирус заблокировал нашу сеть и для её разблокировки нужно число.", event: "info" },
-    { character: "protocol", text: "Пятая буква — К! Потрясающе!", event: "success" }
+    { character: "protocol", text: "Похоже вирус заблокировал нашу сеть и для её разблокировки нужно число.", event: "info", mood: "mouth-open" },
+    { character: "protocol", text: "Пятая буква — К! Потрясающе!", event: "success", mood: "mouth-closed" }
   ],
   "task-6": [
-    { character: "protocol", text: "Снова зашифрованные текстовые данные. Проще простого!", event: "info" },
-    { character: "protocol", text: "Шестая буква — С! Отлично!", event: "success" }
+    { character: "protocol", text: "Снова зашифрованные текстовые данные. Проще простого!", event: "info", mood: "mouth-closed" },
+    { character: "protocol", text: "Шестая буква — С! Отлично!", event: "success", mood: "mouth-open" }
   ],
   "task-7": [
-    { character: "protocol", text: "Числовые данные связались друг с другом, давайте их распутаем.", event: "info" },
-    { character: "protocol", text: "Седьмая буква — неизвестна. Возможно, это часть кода, которую мы пока не можем расшифровать.", event: "success" }
+    { character: "protocol", text: "Числовые данные связались друг с другом, давайте их распутаем.", event: "info", mood: "mouth-open" },
+    { character: "protocol", text: "Седьмая буква — неизвестна. Возможно, это часть кода, которую мы пока не можем расшифровать.", event: "success", mood: "mouth-closed" }
   ],
   "task-8": [
-    { character: "protocol", text: "Очередная текстовая шифровка. Решите её ещё разок?", event: "info" },
-    { character: "protocol", text: "Восьмая буква — неизвестна. Продолжаем собирать данные.", event: "success" }
+    { character: "protocol", text: "Очередная текстовая шифровка. Решите её ещё разок?", event: "info", mood: "mouth-closed" },
+    { character: "protocol", text: "Восьмая буква — неизвестна. Продолжаем собирать данные.", event: "success", mood: "mouth-open" }
   ],
   "task-9": [
-    { character: "protocol", text: "Требуется разблокировать доступ к хранилищу данных.", event: "info" },
-    { character: "protocol", text: "Девятая буква — неизвестна. Возможно, она появится позже.", event: "success" }
+    { character: "protocol", text: "Требуется разблокировать доступ к хранилищу данных.", event: "info", mood: "mouth-open" },
+    { character: "protocol", text: "Девятая буква — неизвестна. Возможно, она появится позже.", event: "success", mood: "mouth-closed" }
   ]
 };

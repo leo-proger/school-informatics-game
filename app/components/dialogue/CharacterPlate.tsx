@@ -7,40 +7,24 @@ interface Props {
 }
 
 export default function CharacterPlate({ speaker, avatar, color }: Props) {
+  // Если avatar пустой — не показываем круг
+  const showAvatar = avatar && avatar.length > 0;
+
   return (
-    <div className="w-[220px] border-r border-white/10 flex flex-col justify-center items-center p-8">
-      <div
-        className="w-28 h-28 rounded-full border-4 flex items-center justify-center overflow-hidden"
-        style={{
-          borderColor: color,
-          boxShadow: `0 0 35px ${color}`,
-        }}
-      >
-        {/* Место для аватара */}
-        <img 
-          src={avatar} 
-          alt={speaker}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // Если картинка не загрузилась — показываем плейсхолдер
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.parentElement!.innerHTML = speaker[0];
-            target.parentElement!.style.fontSize = '3rem';
-            target.parentElement!.style.color = color;
-          }}
-        />
-      </div>
-
-      <div
-        className="mt-6 text-xl font-bold tracking-[4px]"
-        style={{ color }}
-      >
+    <div className="flex flex-col items-center justify-center w-48 p-6 border-r border-white/5">
+      {showAvatar && (
+        <div
+          className="w-20 h-20 rounded-full border-2 mb-4 overflow-hidden"
+          style={{ borderColor: `${color}60` }}
+        >
+          <img src={avatar} alt={speaker} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <span className="text-white/80 font-mono text-sm tracking-widest">
         {speaker}
-      </div>
-
+      </span>
       <div
-        className="mt-4 w-24 h-[2px]"
+        className="w-12 h-0.5 mt-2 rounded-full"
         style={{ background: color }}
       />
     </div>
