@@ -1,49 +1,101 @@
 # NEXUS Hackathon — Протокол ФЕНИКС
 
-Платформа для проведения хакатона в киберпанк-сеттинге. Команды регистрируются, решают задания двух туров и соревнуются
-в рейтинге.
+Платформа для проведения хакатона в киберпанк RPG-сеттинге (6–20 июня 2026). Команды регистрируются, проходят пролог,
+решают задания двух туров и соревнуются в рейтинге.
 
 ## Стек
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript**
 - **Tailwind CSS 4** — стилизация
-- **localStorage** — хранение команд и сессий (бэкенда нет)
+- **Supabase** — база данных и авторизация (таблицы: `teams`, `participants`, `tasks`, `settings`)
+- **localStorage** — сессия игрока (`phoenix_session`) и прогресс игры (`phoenix_round1_progress`)
 
-## Структура
+## Структура проекта
 
 ```
 app/
-├── page.tsx          # Главная — лор, кнопки входа/регистрации
-├── register/         # Регистрация команды (2 шага: команда → участники)
-├── login/            # Вход по названию команды и паролю
-├── tasks/            # Задания туров с таймером и вводом ответов
-├── leaderboard/      # Рейтинг с фильтрацией по стране/городу/школе
+├── page.tsx                  # Лендинг с лором и кнопками входа/регистрации
+├── register/                 # Регистрация команды (2 шага)
+├── login/                    # Вход по названию + паролю
+├── tasks/
+│   ├── page.tsx              # Выбор тура, статус сохранений
+│   └── round1/               # Основная игра (пролог → карта → босс → победа)
+├── leaderboard/              # Рейтинг (моковые данные)
+├── admin/                    # Панель администратора (только для isAdmin)
 ├── components/
-│   └── navbar.tsx    # Навбар с состоянием авторизации
+│   ├── navbar.tsx
+│   ├── dialogue/             # DialogueBox, CharacterPlate, TypeWriter
+│   ├── layout/               # Background, GameLayout, TopHUD
+│   ├── tasks/                # TaskMap, TaskCard, PuzzleModal
+│   └── ui/                   # GlassPanel, NeonButton, ProgressBar
+├── data/
+│   ├── tasks-round1.ts       # Задания тура 1
+│   ├── tasks-round2.ts       # Босс-задание тура 2
+│   └── dialogues.ts          # Все диалоговые последовательности
 └── lib/
-    ├── auth-context.tsx  # Контекст авторизации (register/login/logout)
-    └── mock-data.ts      # Задания, даты туров, тестовый лидерборд
+    ├── auth-context.tsx      # Контекст авторизации через Supabase
+    ├── supabase.ts           # Клиент Supabase
+    ├── types.ts              # Общие типы (GameTask, TaskNode, DialogueLine)
+    ├── characters.ts         # 4 персонажа: protocol, nexus, void, player
+    └── mock-data.ts          # Моковый лидерборд, TOURNAMENT_DATES
 ```
 
-## Запуск
+## Настройка и запуск
+
+### 1. Установка зависимостей
 
 ```bash
 npm install
+```
+
+### 2. Получить доступ к Supabase
+
+БД уже поднята и наполнена. Попросите владельца проекта добавить вас в организацию через **Supabase Dashboard →
+Organization Settings → Members → Invite**.
+
+После принятия приглашения откройте проект и скопируйте **Project Settings → API → вкладка "Legacy anon..." → "anon
+public" ключ** - это `NEXT_PUBLIC_SUPABASE_ANON_KEY` в `.env.local`
+
+### 3. Переменные окружения
+
+```bash
+cp .env.example .env.local
+```
+
+Вставьте ключи из предыдущего шага (переменную `NEXT_PUBLIC_SUPABASE_URL` менять не надо):
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://yanxxepahepxskhlbxif.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### 4. Запуск в режиме разработки
+
+```bash
 npm run dev
 ```
 
 Открыть [http://localhost:3000](http://localhost:3000).
 
+## Игровые фазы (`/tasks/round1`)
+
+```
+video → prologue → round1 → taskDialogue → round1Complete → round2Code → round2Dialogue → round2Boss → victory
+```
+
+Прогресс сохраняется в `localStorage` при каждом переходе фазы.
+
 ## Механика
 
-**Регистрация** — название команды (мин. 3 симв.) + пароль (мин. 6 симв.) + данные участников (1–5 человек: ФИО, город,
-школа). Данные хранятся в `localStorage`.
+**Регистрация** — название команды (мин. 3 симв.) + пароль (мин. 6 симв.) + данные участников (1–5 чел.: ФИО, город,
+школа).
 
-**Туры** — два тура с фиксированными датами (`mock-data.ts`). До старта — таймер обратного отсчёта, во время — счётчик
-оставшегося времени. До официального начала тура 1 включается демо-режим.
+**Тур 1** — 4 задания разной сложности (`easy`, `medium`, `hard`) + финальный диалог. Ответы проверяются через
+`checkAnswer()`.
 
-**Задания** — тип `base` доступен всем, `extra` — командам 2+, `boss` (тур 2) — зависит от размера команды (
-`minTeamSize`). Ответ вводится в поле и отмечается выполненным локально.
+**Тур 2** — одно босс-задание, выбираемое по размеру команды (`getBossTask(minTeamSize)`). Проверка через
+`checkBossAnswer()`.
 
-**Рейтинг** — агрегируется по стране / городу / школе. Поиск по названию команды, школе, городу. Данные моковые (
-`MOCK_LEADERBOARD`).
+**Рейтинг** — моковые данные (`MOCK_LEADERBOARD`). Фильтрация по городу и школе.
+
+**Даты туров** — управляются через таблицу `settings` в Supabase, редактируются в `/admin`.
