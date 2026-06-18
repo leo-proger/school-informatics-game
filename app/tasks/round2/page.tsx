@@ -250,43 +250,6 @@ export default function Round2Page() {
 
   setFailedTasks((prev) => [...prev, task.id]);
 
-    setCircles((prev) =>
-      prev.map((circle) =>
-        circle.id === task.id ? { ...circle, completed: true, active: false } : circle
-      )
-    );
-
-    if (newCompleted.length === round2Tasks.length) {
-      setTimeout(() => {
-        setPhase("victory");
-        setVictoryIndex(0);
-      }, 1500);
-      return true;
-    }
-
-    let nextIndex = -1;
-    for (let i = 0; i < round2Tasks.length; i++) {
-      const id = round2Tasks[i].id;
-      if (!newCompleted.includes(id) && !failedTasks.includes(id)) {
-        nextIndex = i;
-        break;
-      }
-    }
-
-    if (nextIndex !== -1) {
-      setActiveTaskIndex(nextIndex);
-      setCircles((prev) =>
-        prev.map((circle) => ({
-          ...circle,
-          active: circle.id === round2Tasks[nextIndex].id,
-        }))
-      );
-    }
-    return true;
-  }
-
-  setFailedTasks((prev) => [...prev, task.id]);
-
   setCircles((prev) =>
     prev.map((circle) =>
       circle.id === task.id ? { ...circle, failed: true, active: false } : circle
