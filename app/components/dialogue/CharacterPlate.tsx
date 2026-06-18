@@ -17,6 +17,7 @@ export default function CharacterPlate({ speaker, avatar, color }: Props) {
           className="w-20 h-20 rounded-full border-2 mb-4 overflow-hidden"
           style={{ borderColor: `${color}60` }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={avatar} alt={speaker} className="w-full h-full object-cover" />
         </div>
       )}

@@ -1,11 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/app/lib/auth-context';
-import { MOCK_LEADERBOARD, MockTeam } from '@/app/lib/mock-data';
+import { supabase } from '@/app/lib/supabase';
 import Background from '@/app/components/layout/Background';
 
-type FilterType = 'country' | 'city' | 'school';
+interface LeaderboardTeam {
+  id: string;
+  name: string;
+  school: string;
+  city: string;
+  score: number;
+  tour1: boolean;
+  tour2: boolean;
+  isAdmin: boolean;
+}
+
+type FilterType = 'city' | 'school';
 type TourTab = 1 | 2;
 
 function getRankStyle(rank: number) {
@@ -22,31 +33,78 @@ function getRankIcon(rank: number) {
   return `#${rank}`;
 }
 
+async function fetchLeaderboard(): Promise<LeaderboardTeam[]> {
+  const { data, error } = await supabase
+    .from('teams')
+    .select('id, name, score, is_admin, tour1_completed, tour2_completed, participants(city, school)')
+    .order('score', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map(row => {
+    const participants = (row.participants as { city: string; school: string }[]) ?? [];
+    const first = participants[0];
+    return {
+      id: row.id,
+      name: row.name,
+      school: first?.school ?? '',
+      city: first?.city ?? '',
+      score: row.score ?? 0,
+      tour1: row.tour1_completed ?? false,
+      tour2: row.tour2_completed ?? false,
+      isAdmin: row.is_admin ?? false,
+    };
+  });
+}
+
 export default function LeaderboardPage() {
   const { team } = useAuth();
   const [tourTab, setTourTab] = useState<TourTab>(1);
-  const [filter, setFilter] = useState<FilterType>('country');
+  const [filter, setFilter] = useState<FilterType>('city');
   const [search, setSearch] = useState('');
+  const [allTeams, setAllTeams] = useState<LeaderboardTeam[]>([]);
+  const [showAdmins, setShowAdmins] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const tourTeams = MOCK_LEADERBOARD
-    .filter(t => tourTab === 1 ? t.tour1 : t.tour2)
-    .sort((a, b) => b.score - a.score)
+  const reload = useCallback(async () => {
+    const [teams, { data: settingRow }] = await Promise.all([
+      fetchLeaderboard(),
+      supabase.from('settings').select('value').eq('key', 'leaderboard_show_admins').single(),
+    ]);
+    setAllTeams(teams);
+    setShowAdmins(settingRow?.value === 'true');
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void reload();
+
+    const channel = supabase
+      .channel('leaderboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, reload)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'key=eq.leaderboard_show_admins' }, reload)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [reload]);
+
+  const visibleTeams = allTeams.filter(t => showAdmins || !t.isAdmin);
+
+  const tourTeams = visibleTeams
     .map((t, i) => ({ ...t, rank: i + 1 }));
 
   const filterLabel: Record<FilterType, string> = {
-    country: 'По стране',
     city: 'По городу',
     school: 'По школе',
   };
 
-  const filterKey: Record<FilterType, keyof MockTeam> = {
-    country: 'country',
+  const filterKey: Record<FilterType, keyof LeaderboardTeam> = {
     city: 'city',
     school: 'school',
   };
 
   const grouped = tourTeams.reduce<Record<string, { name: string; teams: number; totalScore: number; top3: string[] }>>((acc, t) => {
-    const key = String(t[filterKey[filter]]);
+    const key = String(t[filterKey[filter]]) || '—';
     if (!acc[key]) acc[key] = { name: key, teams: 0, totalScore: 0, top3: [] };
     acc[key].teams++;
     acc[key].totalScore += t.score;
@@ -63,20 +121,23 @@ export default function LeaderboardPage() {
       t.school.toLowerCase().includes(search.toLowerCase()) ||
       t.city.toLowerCase().includes(search.toLowerCase()));
 
+  const myRank = tourTeams.findIndex(t => t.id === team?.id);
+  const myLiveScore = allTeams.find(t => t.id === team?.id)?.score ?? team?.score ?? 0;
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <Background />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-12">
 
-        {/* Page title */}
         <div className="mb-8 text-center">
           <p className="text-xs font-mono tracking-[0.4em] text-cyan-400 uppercase mb-2">/NEXUS БАЗА ДАННЫХ/</p>
           <h1 className="text-4xl font-black neon-text mb-2">РЕЙТИНГ КОМАНД</h1>
-          <p className="text-sm text-slate-400 font-mono">{MOCK_LEADERBOARD.length} команд · Актуальные результаты хакатона</p>
+          <p className="text-sm text-slate-400 font-mono">
+            {loading ? 'Загрузка...' : `${visibleTeams.length} команд · Актуальные результаты хакатона`}
+          </p>
         </div>
 
-        {/* Tour tabs */}
         <div className="flex justify-center mb-8">
           <div className="flex rounded-xl overflow-hidden border border-cyan-500/20 p-1 gap-1"
             style={{ background: 'rgba(0, 8, 22, 0.6)' }}>
@@ -96,14 +157,13 @@ export default function LeaderboardPage() {
                     ? 'bg-cyan-500/15 text-cyan-400'
                     : 'bg-sky-500/15 text-sky-400'
                   }`}>
-                  {t === 1 ? MOCK_LEADERBOARD.filter(x => x.tour1).length : MOCK_LEADERBOARD.filter(x => x.tour2).length}
+                  {t === 1 ? visibleTeams.filter(x => x.tour1).length : visibleTeams.filter(x => x.tour2).length}
                 </span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* ── ROW 1: Team card (left) + Main leaderboard (right) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 mb-6">
 
           {/* Left: current team */}
@@ -115,9 +175,17 @@ export default function LeaderboardPage() {
                 <div className="border-b border-cyan-500/15 pb-4">
                   <p className="text-lg font-bold text-white leading-tight">{team.name}</p>
                   <div className="flex items-end justify-between mt-2">
-                    <p className="text-xs text-slate-400 font-mono">{team.participants[0]?.school}</p>
+                    <div>
+                      <p className="text-xs text-slate-400 font-mono">{team.participants[0]?.school}</p>
+                      {myRank >= 0 && (
+                        <p className="text-xs text-cyan-400 font-mono mt-1">
+                          {tourTab === 1 && team.tour1Completed ? `#${myRank + 1} в туре 1` :
+                           tourTab === 2 && team.tour2Completed ? `#${myRank + 1} в туре 2` : 'Тур не пройден'}
+                        </p>
+                      )}
+                    </div>
                     <div className="text-right">
-                      <p className="text-2xl font-black text-cyan-300 neon-text">{team.score}</p>
+                      <p className="text-2xl font-black text-cyan-300 neon-text">{myLiveScore}</p>
                       <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">очков</p>
                     </div>
                   </div>
@@ -171,7 +239,6 @@ export default function LeaderboardPage() {
               />
             </div>
 
-            {/* Table header */}
             <div className="hidden sm:grid grid-cols-12 gap-3 px-5 py-3 text-[10px] font-mono text-slate-500 uppercase tracking-widest border-b border-cyan-500/5">
               <span className="col-span-1">#</span>
               <span className="col-span-4">Название</span>
@@ -182,9 +249,13 @@ export default function LeaderboardPage() {
             </div>
 
             <div className="divide-y divide-cyan-500/5 max-h-96 overflow-y-auto">
-              {filteredTeams.map(t => (
-                <div key={t.rank}
-                  className={`px-5 py-3 transition-colors hover:bg-cyan-500/5 ${t.rank <= 3 ? 'bg-cyan-500/3' : ''}`}>
+              {loading ? (
+                <div className="py-10 text-center text-slate-400 font-mono text-sm">Загрузка...</div>
+              ) : filteredTeams.length === 0 ? (
+                <div className="py-10 text-center text-slate-400 font-mono text-sm">Команды не найдены</div>
+              ) : filteredTeams.map(t => (
+                <div key={t.id}
+                  className={`px-5 py-3 transition-colors hover:bg-cyan-500/5 ${t.rank <= 3 ? 'bg-cyan-500/3' : ''} ${t.id === team?.id ? 'bg-cyan-500/8 border-l-2 border-cyan-400' : ''}`}>
                   {/* Mobile */}
                   <div className="sm:hidden flex items-center gap-3">
                     <span className={`text-base font-black w-8 shrink-0 ${getRankStyle(t.rank)}`}>{getRankIcon(t.rank)}</span>
@@ -210,17 +281,13 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
               ))}
-              {filteredTeams.length === 0 && (
-                <div className="py-10 text-center text-slate-400 font-mono text-sm">Команды не найдены</div>
-              )}
             </div>
           </div>
         </div>
 
-        {/* ── ROW 2: Filter widget (left) + Grouped ranking (right) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
 
-          {/* Left: filter selector */}
+          {/* Left: filter selector + stats */}
           <div className="card-glow rounded-xl p-5 flex flex-col gap-4">
             <p className="text-xs font-mono text-cyan-300 tracking-widest uppercase mb-1">Группировка</p>
             <div className="flex flex-col gap-2">
@@ -248,15 +315,15 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Всего команд</span>
-                  <span className="text-slate-300">{MOCK_LEADERBOARD.length}</span>
+                  <span className="text-slate-300">{visibleTeams.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Прошли Тур 1</span>
-                  <span className="text-cyan-400">{MOCK_LEADERBOARD.filter(t => t.tour1).length}</span>
+                  <span className="text-cyan-400">{visibleTeams.filter(t => t.tour1).length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Прошли Тур 2</span>
-                  <span className="text-sky-400">{MOCK_LEADERBOARD.filter(t => t.tour2).length}</span>
+                  <span className="text-sky-400">{visibleTeams.filter(t => t.tour2).length}</span>
                 </div>
               </div>
             </div>
@@ -288,11 +355,14 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
               ))}
+              {groupedList.length === 0 && !loading && (
+                <div className="py-10 text-center text-slate-400 font-mono text-sm">Нет данных</div>
+              )}
             </div>
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-600 font-mono mt-8">
+        <p className="text-center text-xs text-slate-600 font-mono mt-8" suppressHydrationWarning>
           Обновлено: {new Date().toLocaleString('ru-RU')} · NEXUS DataBase v4.2.1
         </p>
       </div>

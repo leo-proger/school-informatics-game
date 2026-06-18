@@ -9,10 +9,41 @@ import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
 import { round2Start, round2Complete } from "@/app/data/dialogues-round2";
 import { round2Tasks, checkBossAnswer } from "@/app/data/tasks-round2";
+import { supabase } from "@/app/lib/supabase";
+
+const SESSION_KEY = "phoenix_session";
+const ROUND2_TASK_POINTS = 500;
+
+async function addScore(points: number) {
+  const teamId = localStorage.getItem(SESSION_KEY);
+  if (!teamId) return;
+  const { data } = await supabase.from("teams").select("score").eq("id", teamId).single();
+  if (data) {
+    await supabase.from("teams").update({ score: (data.score ?? 0) + points }).eq("id", teamId);
+  }
+}
+
+async function setTour2Completed() {
+  const teamId = localStorage.getItem(SESSION_KEY);
+  if (!teamId) return;
+  await supabase.from("teams").update({ tour2_completed: true }).eq("id", teamId);
+}
 
 export const SAVE_KEY = "phoenix_round2_progress";
 
 type Phase = "code" | "dialogue" | "boss" | "victory";
+
+interface SavedData {
+  phase?: string;
+  dialogueIndex?: number;
+  victoryIndex?: number;
+  completedTasks?: string[];
+  failedTasks?: string[];
+  activeTaskIndex?: number;
+  showVoidHologram?: boolean;
+  showHologramDialogue?: boolean;
+  hologramIndex?: number;
+}
 
 interface TaskCircle {
   id: string;
@@ -26,7 +57,7 @@ interface TaskCircle {
   height: number;
 }
 
-function generateCircles(count: number): TaskCircle[] {
+function generateCircles(): TaskCircle[] {
   const positions = [
     { x: 15, y: 30 },
     { x: 70, y: 25 },
@@ -59,7 +90,7 @@ function generateCircles(count: number): TaskCircle[] {
 export default function Round2Page() {
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
-  const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
+  const [collectedLetters, setCollectedLetters] = useState<string[]>([]); // used in TopHUD via round1 letters
   const [phase, setPhase] = useState<Phase>("dialogue");
   const [dialogueIndex, setDialogueIndex] = useState(0);
   const [victoryIndex, setVictoryIndex] = useState(0);
@@ -75,7 +106,6 @@ export default function Round2Page() {
   const [showHologramDialogue, setShowHologramDialogue] = useState(false);
   const [hologramIndex, setHologramIndex] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
 
   const voidHologramDialogues = [
     { character: "void", text: "Вы думаете, что сможете меня остановить? Я — бесконечность!" },
@@ -86,14 +116,15 @@ export default function Round2Page() {
 
   useEffect(() => {
     const savedLetters = localStorage.getItem("collectedLetters");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedLetters) setCollectedLetters(JSON.parse(savedLetters));
 
-    let savedData: any = {};
+    let savedData: SavedData = {};
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
-        savedData = JSON.parse(raw);
-        setPhase(savedData.phase === "code" ? "dialogue" : savedData.phase ?? "dialogue");
+        savedData = JSON.parse(raw) as SavedData;
+        setPhase((savedData.phase === "code" ? "dialogue" : savedData.phase ?? "dialogue") as Phase);
         setDialogueIndex(savedData.dialogueIndex ?? 0);
         setVictoryIndex(savedData.victoryIndex ?? 0);
         setCompletedTasks(savedData.completedTasks ?? []);
@@ -105,11 +136,11 @@ export default function Round2Page() {
       }
     } catch {}
 
-    const freshCircles = generateCircles(round2Tasks.length);
+    const freshCircles = generateCircles();
     const restoredCircles = freshCircles.map((circle) => {
       const isCompleted = savedData?.completedTasks?.includes(circle.id) ?? false;
       const isFailed = savedData?.failedTasks?.includes(circle.id) ?? false;
-      const isActive = savedData?.activeTaskIndex !== undefined
+      const resolvedActive = savedData?.activeTaskIndex !== undefined
         ? round2Tasks[savedData.activeTaskIndex]?.id === circle.id
         : circle.active;
 
@@ -117,7 +148,7 @@ export default function Round2Page() {
         ...circle,
         completed: isCompleted,
         failed: isFailed,
-        active: isActive && !isCompleted && !isFailed,
+        active: resolvedActive && !isCompleted && !isFailed,
       };
     });
 
@@ -157,22 +188,12 @@ export default function Round2Page() {
 
   useEffect(() => {
     if (completedTasks.length === 3 && !showVoidHologram && !showHologramDialogue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowVoidHologram(true);
       setShowHologramDialogue(true);
       setHologramIndex(0);
     }
   }, [completedTasks, showVoidHologram, showHologramDialogue]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest(".task-tooltip") && !target.closest(".task-circle")) {
-        setSelectedCircleId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const handleAnswerSelect = useCallback((answer: string) => {
     setSelectedAnswer(answer);
@@ -195,6 +216,7 @@ export default function Round2Page() {
     if (isCorrect) {
       const newCompleted = [...completedTasks, task.id];
       setCompletedTasks(newCompleted);
+      addScore(ROUND2_TASK_POINTS);
 
       setCircles((prev) =>
         prev.map((circle) =>
@@ -203,6 +225,7 @@ export default function Round2Page() {
       );
 
       if (newCompleted.length === round2Tasks.length) {
+        setTour2Completed();
         setTimeout(() => {
           setPhase("victory");
           setVictoryIndex(0);
@@ -268,7 +291,6 @@ export default function Round2Page() {
     (circleId: string) => {
       const circle = circles.find((c) => c.id === circleId);
       if (!circle) return;
-      setSelectedCircleId(null);
       const idx = round2Tasks.findIndex((t) => t.id === circleId);
       if (idx !== -1) {
         setActiveTaskIndex(idx);
@@ -301,7 +323,7 @@ export default function Round2Page() {
     const character = getCharacter(line.character);
     return (
       <TaskBackground>
-        <TopHUD progress={50} letters={[]} title="ROUND 2 • VOID" />
+        <TopHUD progress={50} letters={collectedLetters} title="ROUND 2 • VOID" />
         <DialogueBox
           speaker={character.name}
           avatar={character.avatarPlaceholder}
@@ -325,7 +347,7 @@ export default function Round2Page() {
     const character = getCharacter("void");
     return (
       <TaskBackground>
-        <TopHUD progress={75} letters={[]} title="VOID DETECTED" />
+        <TopHUD progress={75} letters={collectedLetters} title="VOID DETECTED" />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="text-9xl animate-pulse opacity-20 text-red-500">👾</div>
         </div>
@@ -362,11 +384,10 @@ export default function Round2Page() {
 
     const isCompleted = completedTasks.includes(currentTask?.id || "");
     const isFailed = failedTasks.includes(currentTask?.id || "");
-    const isActive = !isCompleted && !isFailed;
 
     return (
       <TaskBackground>
-        <TopHUD progress={progress} letters={[]} title="VOID NETWORK" />
+        <TopHUD progress={progress} letters={collectedLetters} title="VOID NETWORK" />
 
         <div className="relative z-10 w-full h-[calc(100vh-120px)]">
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -400,7 +421,6 @@ export default function Round2Page() {
           </svg>
 
           {circles.map((circle) => {
-            const task = round2Tasks.find((t) => t.id === circle.id);
             const isActiveCircle = circle.active && !circle.completed && !circle.failed;
             const isCompletedCircle = circle.completed;
             const isFailedCircle = circle.failed;
@@ -494,7 +514,7 @@ export default function Round2Page() {
       if (!showVictoryOverlay) setShowVictoryOverlay(true);
       return (
         <TaskBackground>
-          <TopHUD progress={100} letters={[]} title="VICTORY" />
+          <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="text-center animate-in fade-in zoom-in duration-1000">
               <div className="text-9xl mb-6">🏆</div>
@@ -523,7 +543,7 @@ export default function Round2Page() {
     const character = getCharacter(line.character);
     return (
       <TaskBackground>
-        <TopHUD progress={100} letters={[]} title="VICTORY" />
+        <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
         <DialogueBox
           speaker={character.name}
           avatar={character.avatarPlaceholder}

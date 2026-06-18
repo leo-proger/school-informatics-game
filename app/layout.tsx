@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Протокол ФЕНИКС — NEXUS Hackathon 2026",
   description: "Международный хакатон по кибербезопасности. 2031 год. Уничтожьте вирус VOID.",
+  keywords: ["хакатон", "NEXUS", "ФЕНИКС", "кибербезопасность", "школьники", "программирование"],
+  openGraph: {
+    title: "Протокол ФЕНИКС — NEXUS Hackathon 2026",
+    description: "Международный хакатон по кибербезопасности для школьников. Уничтожьте вирус VOID.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -26,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen" style={{ background: '#080d1e' }}>
+      <body className="min-h-screen" style={{ background: '#050816' }}>
         <AuthProvider>
           <Navbar />
           <main className="pt-16">

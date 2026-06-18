@@ -76,8 +76,9 @@ export default function TasksPage() {
 
   useEffect(() => {
     const raw = localStorage.getItem(ROUND1_SAVE_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaveLabel(getSaveLabel(raw));
-    
+
     const isDone = isRound1Complete();
     setRound1Completed(isDone);
     setRound2Unlocked(isDone);
@@ -96,25 +97,12 @@ export default function TasksPage() {
     router.push("/tasks/round1");
   };
 
-  const handleFresh = () => {
-    localStorage.removeItem(ROUND1_SAVE_KEY);
-    localStorage.removeItem("round1Completed");
-    localStorage.removeItem("collectedLetters");
-    router.push("/tasks/round1");
-  };
-
-  const handleResetRound2 = () => {
-    localStorage.removeItem(ROUND2_SAVE_KEY);
-    setRound2HasSave(false);
-    setShowRound2Reset(false);
-    router.push("/tasks/round2");
-  };
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative h-screen overflow-hidden">
       <Background />
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-12">
+      <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
         {/* Header */}
         <div className="text-center mb-12">
           <p className="text-xs tracking-[0.4em] text-cyan-400 uppercase font-mono mb-3">/ВЫБОР ТУРА/</p>
@@ -239,7 +227,8 @@ export default function TasksPage() {
 
       {/* Confirmation modal для Тура 1 */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={() => setShowConfirm(false)}>
+          <div onClick={e => e.stopPropagation()}>
           <GlassPanel className="p-10 max-w-md w-full text-center">
             {round1Completed ? (
               <>
@@ -250,14 +239,11 @@ export default function TasksPage() {
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-2">Тур 1 уже пройден!</h3>
                 <p className="text-slate-400 text-sm font-mono mb-8 leading-relaxed">
-                  Хотите <span className="text-cyan-300">пройти заново</span> или перейти к <span className="text-red-400">Туру 2</span>?
+                  Перейдите к <span className="text-red-400">Туру 2</span>.
                 </p>
                 <div className="flex flex-col gap-3">
-                  <NeonButton color="cyan" onClick={handleFresh} className="w-full justify-center">
-                    ПРОЙТИ ЗАНОВО
-                  </NeonButton>
-                  <NeonButton 
-                    color="red" 
+                  <NeonButton
+                    color="red"
                     onClick={() => {
                       if (round2HasSave) {
                         setShowConfirm(false);
@@ -265,7 +251,7 @@ export default function TasksPage() {
                       } else {
                         router.push("/tasks/round2");
                       }
-                    }} 
+                    }}
                     className="w-full justify-center"
                   >
                     ПЕРЕЙТИ К ТУРУ 2
@@ -290,13 +276,10 @@ export default function TasksPage() {
                 <p className="text-slate-400 text-sm font-mono mb-2 leading-relaxed">
                   <span className="text-yellow-300">{saveLabel}</span>
                 </p>
-                <p className="text-slate-500 text-xs font-mono mb-8">Продолжить с места остановки или начать заново?</p>
+                <p className="text-slate-500 text-xs font-mono mb-8">Продолжить с места остановки?</p>
                 <div className="flex flex-col gap-3">
                   <NeonButton color="cyan" onClick={handleContinue} className="w-full justify-center">
                     ПРОДОЛЖИТЬ
-                  </NeonButton>
-                  <NeonButton color="red" onClick={handleFresh} className="w-full justify-center">
-                    НАЧАТЬ ЗАНОВО
                   </NeonButton>
                   <button
                     onClick={() => setShowConfirm(false)}
@@ -320,7 +303,7 @@ export default function TasksPage() {
                   Таймер запустится сразу после старта.
                 </p>
                 <div className="flex gap-4 justify-center">
-                  <NeonButton color="cyan" onClick={handleFresh}>
+                  <NeonButton color="cyan" onClick={() => router.push("/tasks/round1")}>
                     НАЧАТЬ
                   </NeonButton>
                   <NeonButton color="red" onClick={() => setShowConfirm(false)}>
@@ -330,12 +313,14 @@ export default function TasksPage() {
               </>
             )}
           </GlassPanel>
+          </div>
         </div>
       )}
 
       {/* Modal для сброса 2 тура */}
       {showRound2Reset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={() => setShowRound2Reset(false)}>
+          <div onClick={e => e.stopPropagation()}>
           <GlassPanel className="p-10 max-w-md w-full text-center">
             <div className="w-14 h-14 rounded-full border border-yellow-400/40 bg-yellow-500/10 flex items-center justify-center mx-auto mb-6">
               <svg className="w-7 h-7 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -348,25 +333,18 @@ export default function TasksPage() {
               У вас есть сохранённый прогресс во втором туре.
             </p>
             <p className="text-slate-500 text-xs font-mono mb-8">
-              Хотите продолжить с места остановки или начать заново?
+              Продолжить с места остановки?
             </p>
             <div className="flex flex-col gap-3">
-              <NeonButton 
-                color="cyan" 
+              <NeonButton
+                color="cyan"
                 onClick={() => {
                   setShowRound2Reset(false);
                   router.push("/tasks/round2");
-                }} 
+                }}
                 className="w-full justify-center"
               >
                 ПРОДОЛЖИТЬ
-              </NeonButton>
-              <NeonButton 
-                color="red" 
-                onClick={handleResetRound2} 
-                className="w-full justify-center"
-              >
-                НАЧАТЬ ЗАНОВО
               </NeonButton>
               <button
                 onClick={() => setShowRound2Reset(false)}
@@ -376,6 +354,7 @@ export default function TasksPage() {
               </button>
             </div>
           </GlassPanel>
+          </div>
         </div>
       )}
     </div>

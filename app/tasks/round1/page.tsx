@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import TaskBackground from "@/app/components/layout/TaskBackground";
 import TopHUD from "@/app/components/layout/TopHUD";
-import TaskMap, { TaskNode } from "@/app/components/tasks/TaskMap";
+import TaskMap from "@/app/components/tasks/TaskMap";
 import PuzzleModal from "@/app/components/tasks/PuzzleModal";
 import DialogueBox from "@/app/components/dialogue/DialogueBox";
 import GlassPanel from "@/app/components/ui/GlassPanel";
@@ -11,6 +11,25 @@ import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
 import { round1Tasks, getTask, checkAnswer } from "@/app/data/tasks-round1";
 import { prologue, round1Complete, taskDialogs } from "@/app/data/dialogues";
+import { supabase } from "@/app/lib/supabase";
+import { DIFFICULTY_POINTS, generateNodes } from "@/app/lib/game-utils";
+
+const SESSION_KEY = "phoenix_session";
+
+async function addScore(points: number) {
+  const teamId = localStorage.getItem(SESSION_KEY);
+  if (!teamId) return;
+  const { data } = await supabase.from("teams").select("score").eq("id", teamId).single();
+  if (data) {
+    await supabase.from("teams").update({ score: (data.score ?? 0) + points }).eq("id", teamId);
+  }
+}
+
+async function setTour1Completed() {
+  const teamId = localStorage.getItem(SESSION_KEY);
+  if (!teamId) return;
+  await supabase.from("teams").update({ tour1_completed: true }).eq("id", teamId);
+}
 
 export const SAVE_KEY = "phoenix_round1_progress";
 
@@ -18,30 +37,6 @@ type Phase =
   | "video" | "prologue" | "round1" | "taskDialogue"
   | "round1Complete" | "round1Code";
 
-function generateNodes(
-  tasks: typeof round1Tasks,
-  completed: string[],
-  failed: string[],
-  activeId: string | null
-): TaskNode[] {
-  return tasks.map((task, index) => {
-    const isUnlocked = index === 0 || completed.includes(tasks[index - 1].id) || failed.includes(tasks[index - 1].id);
-    const isFailed = failed.includes(task.id);
-    const isCompleted = completed.includes(task.id);
-    
-    return {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      x: 15 + (index % 3) * 30,
-      y: 20 + Math.floor(index / 3) * 30,
-      active: task.id === activeId && isUnlocked && !isFailed && !isCompleted,
-      completed: isCompleted,
-      locked: !isUnlocked,
-      failed: isFailed,
-    };
-  });
-}
 
 export default function Round1Page() {
   const router = useRouter();
@@ -64,6 +59,7 @@ export default function Round1Page() {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
+        /* eslint-disable react-hooks/set-state-in-effect */
         setPhase(data.phase === "video" ? "prologue" : (data.phase ?? "prologue"));
         setPrologueIndex(data.prologueIndex ?? 0);
         setCompletedTasks(data.completedTasks ?? []);
@@ -74,6 +70,7 @@ export default function Round1Page() {
         setR1cIdx(data.r1cIdx ?? 0);
         setFailedTasks(data.failedTasks ?? []);
         setAccessCode(data.accessCode ?? "");
+        /* eslint-enable react-hooks/set-state-in-effect */
       }
     } catch {}
     setLoaded(true);
@@ -109,6 +106,9 @@ export default function Round1Page() {
     if (isCorrect) {
       const newCompleted = [...completedTasks, activeTaskId];
       setCompletedTasks(newCompleted);
+
+      const points = DIFFICULTY_POINTS[task.difficulty] ?? 100;
+      addScore(points);
 
       const word = "ФЕНИКС";
       const nextLetter = word[newCompleted.length - 1];
@@ -330,6 +330,7 @@ export default function Round1Page() {
                 if (e.key === "Enter") {
                   if (accessCode === expectedCode) {
                     localStorage.setItem("round1Completed", "true");
+                    setTour1Completed();
                     router.push("/tasks");
                   }
                 }
@@ -340,6 +341,7 @@ export default function Round1Page() {
               onClick={() => {
                 if (accessCode === expectedCode) {
                   localStorage.setItem("round1Completed", "true");
+                  setTour1Completed();
                   router.push("/tasks");
                 }
               }}

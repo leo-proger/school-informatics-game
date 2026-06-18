@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import GlassPanel from "../ui/GlassPanel";
 import NeonButton from "../ui/NeonButton";
 
@@ -50,12 +50,14 @@ export default function PuzzleModal({
 
   // ✅ Сбрасываем подсказку при смене задания (меняется title)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowHint(false);
   }, [title]);
 
   // ✅ Сбрасываем подсказку при закрытии
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInput("");
       setStatus("idle");
       setHasAttempted(false);
@@ -79,6 +81,24 @@ export default function PuzzleModal({
     return () => clearInterval(timer);
   }, [open, timeLimit, isReadOnly]);
 
+  const handleSubmit = useCallback(() => {
+    if (isReadOnly || hasAttempted) return;
+
+    const value = hasOptions ? (selectedOption || "") : input;
+    if (!value.trim()) return;
+
+    const result = onSubmit(value);
+    setStatus(result ? "success" : "error");
+    setHasAttempted(true);
+
+    setTimeout(() => {
+      onClose();
+      setStatus("idle");
+      setInput("");
+      setHasAttempted(false);
+    }, 1500);
+  }, [isReadOnly, hasAttempted, hasOptions, selectedOption, input, onSubmit, onClose]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -89,25 +109,7 @@ export default function PuzzleModal({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [input, isReadOnly, hasAttempted, hasOptions]);
-
-  const handleSubmit = () => {
-    if (isReadOnly || hasAttempted) return;
-    
-    const value = hasOptions ? (selectedOption || "") : input;
-    if (!value.trim()) return;
-    
-    const result = onSubmit(value);
-    setStatus(result ? "success" : "error");
-    setHasAttempted(true);
-    
-    setTimeout(() => {
-      onClose();
-      setStatus("idle");
-      setInput("");
-      setHasAttempted(false);
-    }, 1500);
-  };
+  }, [input, isReadOnly, hasAttempted, hasOptions, handleSubmit, onClose]);
 
   if (!open) return null;
 

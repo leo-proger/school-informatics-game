@@ -16,6 +16,7 @@ export default function TypeWriter({
   const [displayed, setDisplayed] = useState("");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDisplayed("");
 
     let index = 0;
@@ -33,6 +34,7 @@ export default function TypeWriter({
     }, speed);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
   return (

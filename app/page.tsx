@@ -200,7 +200,7 @@ export default function HomePage() {
                     <span className="text-yellow-400">▸ 20.06 — Финал и награждение</span>
                   </div>
                 </div>
-                <Link href="/leaderboard"
+                <Link href="/schedule"
                   className="btn-neon text-center py-2.5 rounded-lg text-xs font-semibold tracking-wide uppercase mt-auto">
                   Расписание туров →
                 </Link>
@@ -272,6 +272,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4 text-xs font-mono">
               <Link href="/tasks" className="text-slate-500 hover:text-cyan-300 transition-colors">Задания</Link>
               <Link href="/leaderboard" className="text-slate-500 hover:text-cyan-300 transition-colors">Рейтинг</Link>
+              <Link href="/schedule" className="text-slate-500 hover:text-cyan-300 transition-colors">Расписание</Link>
               <Link href="/register" className="text-slate-500 hover:text-cyan-300 transition-colors">Регистрация</Link>
               <Link href="/login" className="text-slate-500 hover:text-cyan-300 transition-colors">Вход</Link>
             </div>

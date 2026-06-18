@@ -80,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ team: null, isLoading: false });
       return;
     }
@@ -118,6 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('phoenix_round1_progress');
+    localStorage.removeItem('phoenix_round2_progress');
+    localStorage.removeItem('collectedLetters');
+    localStorage.removeItem('round1Completed');
     setState({ team: null, isLoading: false });
   };
 

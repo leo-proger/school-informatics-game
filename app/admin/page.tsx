@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-context";
 import { supabase } from "@/app/lib/supabase";
 import Background from "@/app/components/layout/Background";
+import { Setting, groupSettings, isBooleanKey } from "@/app/lib/settings-utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -39,12 +40,6 @@ interface Task {
   tour: 1 | 2;
   task_type: "regular" | "boss";
   min_team_size: number;
-}
-
-interface Setting {
-  key: string;
-  value: string;
-  label: string;
 }
 
 type Tab = "teams" | "tasks" | "settings";
@@ -127,6 +122,7 @@ function TeamsTab() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: "team" | "participant"; id: string; name: string } | null>(null);
   const [search, setSearch] = useState("");
+  const [hideAdmins, setHideAdmins] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -140,7 +136,8 @@ function TeamsTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   const saveTeam = async () => {
     if (!editing) return;
@@ -184,7 +181,10 @@ function TeamsTab() {
     load();
   };
 
-  const filtered = teams.filter(t => t.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = teams.filter(t =>
+    t.name.toLowerCase().includes(search.toLowerCase()) &&
+    (!hideAdmins || !t.is_admin)
+  );
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" /></div>;
 
@@ -204,13 +204,25 @@ function TeamsTab() {
         ))}
       </div>
 
-      {/* Search */}
-      <input
-        placeholder="Поиск по названию..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="w-full mb-4 bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
-      />
+      {/* Search + filter */}
+      <div className="flex gap-3 mb-4">
+        <input
+          placeholder="Поиск по названию..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="flex-1 bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
+        />
+        <button
+          onClick={() => setHideAdmins(v => !v)}
+          className={`px-4 py-2 rounded text-xs font-mono border transition-colors whitespace-nowrap ${
+            hideAdmins
+              ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+              : 'bg-white/5 border-white/10 text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          {hideAdmins ? '✓ Админы скрыты' : 'Скрыть админов'}
+        </button>
+      </div>
 
       {/* Table */}
       <div className="rounded-xl border border-cyan-500/20 overflow-hidden">
@@ -224,9 +236,8 @@ function TeamsTab() {
           </thead>
           <tbody>
             {filtered.map((team, i) => (
-              <>
+              <React.Fragment key={team.id}>
                 <tr
-                  key={team.id}
                   className={`border-b border-cyan-500/10 cursor-pointer transition-colors ${expanded === team.id ? "bg-cyan-500/8" : "hover:bg-white/3"} ${i % 2 === 0 ? "" : "bg-white/1"}`}
                   onClick={() => setExpanded(expanded === team.id ? null : team.id)}
                 >
@@ -274,7 +285,7 @@ function TeamsTab() {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -367,7 +378,8 @@ function TasksTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   const save = async () => {
     if (!editing) return;
@@ -503,7 +515,7 @@ function SettingsTab() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    supabase.from("settings").select("*").order("key").then(({ data }) => {
+    supabase.from("settings").select("*").then(({ data }) => {
       setSettings((data ?? []) as Setting[]);
       setLoading(false);
     });
@@ -525,22 +537,56 @@ function SettingsTab() {
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" /></div>;
 
+  const groups = groupSettings(settings);
+
   return (
-    <div className="max-w-2xl">
-      <p className="text-sm text-slate-500 mb-6">Даты используются для управления доступом к турам и отображением таймеров на странице заданий.</p>
-      <div className="space-y-4">
-        {settings.map(s => (
-          <div key={s.key}>
-            <label className="block text-xs text-slate-400 mb-1">{s.label || s.key}</label>
-            <input
-              type="datetime-local"
-              value={s.value.slice(0, 16)}
-              onChange={e => update(s.key, e.target.value + ":00")}
-              className="w-full bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
-            />
+    <div className="max-w-3xl">
+      <p className="text-sm text-slate-500 mb-8">Даты используются для управления доступом к турам и отображением таймеров на странице заданий.</p>
+
+      <div className="space-y-6">
+        {groups.map(group => (
+          <div key={group.groupLabel} className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-6">
+            <h3 className="text-xs font-mono tracking-[0.3em] text-cyan-400 uppercase mb-5">{group.groupLabel}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {group.items.map(s => (
+                <div key={s.key}>
+                  {isBooleanKey(s.key) ? (
+                    <label className="flex items-center justify-between gap-4 cursor-pointer py-2">
+                      <span className="text-sm text-slate-300">{s.label || s.key}</span>
+                      <button
+                        type="button"
+                        onClick={() => update(s.key, s.value === 'true' ? 'false' : 'true')}
+                        className={`relative w-12 h-6 rounded-full border transition-colors shrink-0 ${
+                          s.value === 'true'
+                            ? 'bg-cyan-500/30 border-cyan-400/60'
+                            : 'bg-white/5 border-white/20'
+                        }`}
+                      >
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
+                          s.value === 'true'
+                            ? 'left-[26px] bg-cyan-400'
+                            : 'left-0.5 bg-slate-500'
+                        }`} />
+                      </button>
+                    </label>
+                  ) : (
+                    <>
+                      <label className="block text-xs text-slate-400 mb-1.5">{s.label || s.key}</label>
+                      <input
+                        type="datetime-local"
+                        value={s.value ? s.value.slice(0, 16) : ""}
+                        onChange={e => update(s.key, e.target.value + ":00")}
+                        className="w-full bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
+                      />
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
+
       <div className="flex items-center gap-4 mt-8">
         <button onClick={save} disabled={saving} className="px-6 py-2.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-sm hover:bg-cyan-500/30 transition-colors disabled:opacity-50">
           {saving ? "Сохранение..." : "Сохранить настройки"}
