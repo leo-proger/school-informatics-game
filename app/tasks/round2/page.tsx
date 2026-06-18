@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import TaskBackground from "@/app/components/layout/TaskBackground";
 import TopHUD from "@/app/components/layout/TopHUD";
 import DialogueBox from "@/app/components/dialogue/DialogueBox";
 import PuzzleModal from "@/app/components/tasks/PuzzleModal";
 import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
-import { round2Start, round2Complete } from "@/app/data/dialogues-round2";
+import { round2Start, round2Complete, voidHologramDialogues } from "@/app/data/dialogues-round2";
 import { round2Tasks, checkBossAnswer } from "@/app/data/tasks-round2";
 
 export const SAVE_KEY = "phoenix_round2_progress";
@@ -76,13 +77,6 @@ export default function Round2Page() {
   const [hologramIndex, setHologramIndex] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
-
-  const voidHologramDialogues = [
-    { character: "void", text: "Вы думаете, что сможете меня остановить? Я — бесконечность!" },
-    { character: "void", text: "Ваши алгоритмы — ничто перед моим хаосом!" },
-    { character: "void", text: "Но... как вы это делаете? Мои цепи разрушаются..." },
-    { character: "void", text: "НЕТ! Я не позволю вам уничтожить меня!" }
-  ];
 
   useEffect(() => {
     const savedLetters = localStorage.getItem("collectedLetters");
@@ -179,74 +173,41 @@ export default function Round2Page() {
   }, []);
 
   const handleSubmitAnswer = useCallback(() => {
-    if (!selectedAnswer) return false;
+  if (!selectedAnswer) return false;
 
-    const task = round2Tasks[activeTaskIndex];
-    const isCorrect = checkBossAnswer(task, selectedAnswer);
+  const task = round2Tasks[activeTaskIndex];
+  const isCorrect = checkBossAnswer(task, selectedAnswer);
 
-    setShowResult(isCorrect ? "correct" : "wrong");
+  setShowResult(isCorrect ? "correct" : "wrong");
 
-    setTimeout(() => {
-      setModalOpen(false);
-      setSelectedAnswer("");
-      setShowResult(null);
-    }, 1000);
+  setTimeout(() => {
+    setModalOpen(false);
+    setSelectedAnswer("");
+    setShowResult(null);
+  }, 800);
 
-    if (isCorrect) {
-      const newCompleted = [...completedTasks, task.id];
-      setCompletedTasks(newCompleted);
-
-      setCircles((prev) =>
-        prev.map((circle) =>
-          circle.id === task.id ? { ...circle, completed: true, active: false } : circle
-        )
-      );
-
-      if (newCompleted.length === round2Tasks.length) {
-        setTimeout(() => {
-          setPhase("victory");
-          setVictoryIndex(0);
-        }, 1500);
-        return true;
-      }
-
-      let nextIndex = -1;
-      for (let i = 0; i < round2Tasks.length; i++) {
-        const id = round2Tasks[i].id;
-        if (!newCompleted.includes(id) && !failedTasks.includes(id)) {
-          nextIndex = i;
-          break;
-        }
-      }
-
-      if (nextIndex !== -1) {
-        setActiveTaskIndex(nextIndex);
-        setCircles((prev) =>
-          prev.map((circle) => ({
-            ...circle,
-            active: circle.id === round2Tasks[nextIndex].id,
-          }))
-        );
-      }
-      return true;
-    }
-
-    setFailedTasks((prev) => [...prev, task.id]);
+  if (isCorrect) {
+    const newCompleted = [...completedTasks, task.id];
+    setCompletedTasks(newCompleted);
 
     setCircles((prev) =>
       prev.map((circle) =>
-        circle.id === task.id ? { ...circle, failed: true, active: false } : circle
+        circle.id === task.id ? { ...circle, completed: true, active: false } : circle
       )
     );
+
+    if (newCompleted.length === round2Tasks.length) {
+      setTimeout(() => {
+        setPhase("victory");
+        setVictoryIndex(0);
+      }, 1500);
+      return true;
+    }
 
     let nextIndex = -1;
     for (let i = 0; i < round2Tasks.length; i++) {
       const id = round2Tasks[i].id;
-      if (
-        !completedTasks.includes(id) &&
-        !failedTasks.includes(id) &&
-        id !== task.id
-      ) {
+      if (!newCompleted.includes(id) && !failedTasks.includes(id)) {
         nextIndex = i;
         break;
       }
@@ -261,8 +222,41 @@ export default function Round2Page() {
         }))
       );
     }
-    return false;
-  }, [selectedAnswer, activeTaskIndex, completedTasks, failedTasks]);
+    return true;
+  }
+
+  setFailedTasks((prev) => [...prev, task.id]);
+
+  setCircles((prev) =>
+    prev.map((circle) =>
+      circle.id === task.id ? { ...circle, failed: true, active: false } : circle
+    )
+  );
+
+  let nextIndex = -1;
+  for (let i = 0; i < round2Tasks.length; i++) {
+    const id = round2Tasks[i].id;
+    if (
+      !completedTasks.includes(id) &&
+      !failedTasks.includes(id) &&
+      id !== task.id
+    ) {
+      nextIndex = i;
+      break;
+    }
+  }
+
+  if (nextIndex !== -1) {
+    setActiveTaskIndex(nextIndex);
+    setCircles((prev) =>
+      prev.map((circle) => ({
+        ...circle,
+        active: circle.id === round2Tasks[nextIndex].id,
+      }))
+    );
+  }
+  return false;
+}, [selectedAnswer, activeTaskIndex, completedTasks, failedTasks]);
 
   const handleCircleClick = useCallback(
     (circleId: string) => {
@@ -307,6 +301,7 @@ export default function Round2Page() {
           avatar={character.avatarPlaceholder}
           color={character.color}
           text={line.text}
+          mood={line.mood}
           onNext={() => {
             if (dialogueIndex < round2Start.length - 1) {
               setDialogueIndex(dialogueIndex + 1);
@@ -319,33 +314,55 @@ export default function Round2Page() {
     );
   }
 
-  // === ГОЛОГРАММА VOID ===
-  if (showHologramDialogue && hologramIndex < voidHologramDialogues.length) {
-    const line = voidHologramDialogues[hologramIndex];
-    const character = getCharacter("void");
-    return (
-      <TaskBackground>
-        <TopHUD progress={75} letters={[]} title="VOID DETECTED" />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="text-9xl animate-pulse opacity-20 text-red-500">👾</div>
+// === ГОЛОГРАММА VOID ===
+if (showHologramDialogue && hologramIndex < voidHologramDialogues.length) {
+  const line = voidHologramDialogues[hologramIndex];
+  const character = getCharacter("void");
+  return (
+    <TaskBackground>
+      <TopHUD progress={75} letters={[]} title="VOID DETECTED" />
+      
+      {/* Голограмма — ПОВЕРХ ДИАЛОГА (z-50) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 overflow-hidden">
+        <div className="relative w-[500px] h-[500px]">
+          <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full animate-ping" />
+          <div className="relative w-full h-full drop-shadow-[0_0_100px_rgba(239,68,68,0.5)]">
+            <Image
+              src="/images/avatars/void-angry.png"
+              alt="VOID"
+              fill
+              className="object-contain"
+              sizes="500px"
+              priority
+            />
+          </div>
+          {/* Глитч-полосы */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/4 left-0 w-full h-[2px] bg-red-500/40 animate-pulse" style={{ animationDelay: '0.1s' }} />
+            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-red-400/30 animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <div className="absolute top-3/4 left-0 w-full h-[3px] bg-red-500/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
+          </div>
         </div>
-        <DialogueBox
-          speaker={character.name}
-          avatar={character.avatarPlaceholder}
-          color="#ef4444"
-          text={line.text}
-          onNext={() => {
-            if (hologramIndex < voidHologramDialogues.length - 1) {
-              setHologramIndex(hologramIndex + 1);
-            } else {
-              setShowHologramDialogue(false);
-              setPhase("boss");
-            }
-          }}
-        />
-      </TaskBackground>
-    );
-  }
+      </div>
+      
+      <DialogueBox
+        speaker={character.name}
+        avatar={character.avatarPlaceholder}
+        color="#ef4444"
+        text={line.text}
+        mood="angry"
+        onNext={() => {
+          if (hologramIndex < voidHologramDialogues.length - 1) {
+            setHologramIndex(hologramIndex + 1);
+          } else {
+            setShowHologramDialogue(false);
+            setPhase("boss");
+          }
+        }}
+      />
+    </TaskBackground>
+  );
+}
 
   // === БОСС-ЗАДАНИЯ ===
   if (phase === "boss") {
@@ -529,6 +546,7 @@ export default function Round2Page() {
           avatar={character.avatarPlaceholder}
           color={character.color}
           text={line.text}
+          mood={line.mood}
           onNext={() => setVictoryIndex(victoryIndex + 1)}
         />
       </TaskBackground>
