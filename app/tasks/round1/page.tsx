@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Background from "@/app/components/layout/Background";
+import TaskBackground from "@/app/components/layout/TaskBackground";
 import TopHUD from "@/app/components/layout/TopHUD";
 import TaskMap, { TaskNode } from "@/app/components/tasks/TaskMap";
 import PuzzleModal from "@/app/components/tasks/PuzzleModal";
@@ -115,7 +115,6 @@ export default function Round1Page() {
       const newLetters = [...collectedLetters, nextLetter || "?"];
       setCollectedLetters(newLetters);
       
-      // Сохраняем буквы для второго тура
       localStorage.setItem("collectedLetters", JSON.stringify(newLetters));
 
       if (newCompleted.length >= round1Tasks.length) {
@@ -172,8 +171,7 @@ export default function Round1Page() {
     const line = prologue[prologueIndex];
     const character = getCharacter(line.character);
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={0} letters={[]} title="BOOT SEQUENCE" />
         <DialogueBox
           speaker={character.name}
@@ -190,7 +188,7 @@ export default function Round1Page() {
             }
           }}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
@@ -198,8 +196,7 @@ export default function Round1Page() {
     const nodes = generateNodes(round1Tasks, completedTasks, failedTasks, activeTaskId);
     const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={progress} letters={collectedLetters} title="ROUND 1 • NEXUS" />
         <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
           <div className="w-full max-w-[1700px]">
@@ -232,7 +229,7 @@ export default function Round1Page() {
           isCompleted={activeTaskId ? completedTasks.includes(activeTaskId) : false}
           isFailed={activeTaskId ? failedTasks.includes(activeTaskId) : false}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
@@ -250,8 +247,7 @@ export default function Round1Page() {
     const character = getCharacter(currentLine.character);
     const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={progress} letters={collectedLetters} title="NEW TASK" />
         <DialogueBox
           speaker={character.name}
@@ -270,13 +266,12 @@ export default function Round1Page() {
             }
           }}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
   if (phase === "round1Complete") {
     if (r1cIdx >= round1Complete.length) {
-      // После диалогов — переход к вводу кода
       setPhase("round1Code");
       setR1cIdx(0);
       return null;
@@ -285,8 +280,7 @@ export default function Round1Page() {
     const currentLine = round1Complete[r1cIdx];
     const character = getCharacter(currentLine.character);
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={100} letters={collectedLetters} title="ROUND 1 COMPLETE" />
         <DialogueBox
           speaker={character.name}
@@ -302,7 +296,7 @@ export default function Round1Page() {
             }
           }}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
@@ -311,8 +305,7 @@ export default function Round1Page() {
     const expectedCode = collectedLetters.join("");
 
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={100} letters={collectedLetters} title="ACCESS CODE" />
         <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
           <GlassPanel className="p-12 max-w-2xl w-full text-center">
@@ -336,7 +329,6 @@ export default function Round1Page() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   if (accessCode === expectedCode) {
-                    // Код верный — переходим на страницу выбора тура
                     localStorage.setItem("round1Completed", "true");
                     router.push("/tasks");
                   }
@@ -362,7 +354,7 @@ export default function Round1Page() {
             )}
           </GlassPanel>
         </div>
-      </div>
+      </TaskBackground>
     );
   }
 

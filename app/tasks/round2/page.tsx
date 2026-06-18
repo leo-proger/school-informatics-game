@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Background from "@/app/components/layout/Background";
+import TaskBackground from "@/app/components/layout/TaskBackground";
 import TopHUD from "@/app/components/layout/TopHUD";
 import DialogueBox from "@/app/components/dialogue/DialogueBox";
 import PuzzleModal from "@/app/components/tasks/PuzzleModal";
@@ -268,9 +268,7 @@ export default function Round2Page() {
     (circleId: string) => {
       const circle = circles.find((c) => c.id === circleId);
       if (!circle) return;
-      // ✅ Клик на любой круг — ОТКРЫВАЕТ МОДАЛКУ
       setSelectedCircleId(null);
-      // Находим индекс задания
       const idx = round2Tasks.findIndex((t) => t.id === circleId);
       if (idx !== -1) {
         setActiveTaskIndex(idx);
@@ -302,8 +300,7 @@ export default function Round2Page() {
     const line = round2Start[dialogueIndex];
     const character = getCharacter(line.character);
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={50} letters={[]} title="ROUND 2 • VOID" />
         <DialogueBox
           speaker={character.name}
@@ -318,7 +315,7 @@ export default function Round2Page() {
             }
           }}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
@@ -327,8 +324,7 @@ export default function Round2Page() {
     const line = voidHologramDialogues[hologramIndex];
     const character = getCharacter("void");
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={75} letters={[]} title="VOID DETECTED" />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="text-9xl animate-pulse opacity-20 text-red-500">👾</div>
@@ -347,7 +343,7 @@ export default function Round2Page() {
             }
           }}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
@@ -369,8 +365,7 @@ export default function Round2Page() {
     const isActive = !isCompleted && !isFailed;
 
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={progress} letters={[]} title="VOID NETWORK" />
 
         <div className="relative z-10 w-full h-[calc(100vh-120px)]">
@@ -468,7 +463,6 @@ export default function Round2Page() {
           })}
         </div>
 
-        {/* МОДАЛКА ОТКРЫВАЕТСЯ ДЛЯ ВСЕХ ЗАДАНИЙ */}
         <PuzzleModal
           open={modalOpen}
           title={currentTask?.fullTitle ?? ""}
@@ -490,7 +484,7 @@ export default function Round2Page() {
           showResult={showResult}
           correctAnswer={currentTask?.correctAnswer}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
@@ -499,8 +493,7 @@ export default function Round2Page() {
     if (victoryIndex >= round2Complete.length) {
       if (!showVictoryOverlay) setShowVictoryOverlay(true);
       return (
-        <div className="relative min-h-screen">
-          <Background />
+        <TaskBackground>
           <TopHUD progress={100} letters={[]} title="VICTORY" />
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="text-center animate-in fade-in zoom-in duration-1000">
@@ -522,15 +515,14 @@ export default function Round2Page() {
               </NeonButton>
             </div>
           </div>
-        </div>
+        </TaskBackground>
       );
     }
 
     const line = round2Complete[victoryIndex];
     const character = getCharacter(line.character);
     return (
-      <div className="relative min-h-screen">
-        <Background />
+      <TaskBackground>
         <TopHUD progress={100} letters={[]} title="VICTORY" />
         <DialogueBox
           speaker={character.name}
@@ -539,7 +531,7 @@ export default function Round2Page() {
           text={line.text}
           onNext={() => setVictoryIndex(victoryIndex + 1)}
         />
-      </div>
+      </TaskBackground>
     );
   }
 
