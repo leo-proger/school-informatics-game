@@ -70,8 +70,8 @@ export const round2Start: DialogueLine[] = [
   }
 ];
 
-// Голограмма VOID (появляется после 3-х заданий)
-export const voidHologramDialogues = [
+// ✅ Исправлено: добавлен тип DialogueLine[]
+export const voidHologramDialogues: DialogueLine[] = [
   {
     character: "void",
     text: "Вы думаете, что сможете меня остановить? Я — бесконечность!",
@@ -84,13 +84,8 @@ export const voidHologramDialogues = [
   },
   {
     character: "void",
-    text: "Я проник в каждый уголок NEXUS. Вы никогда не найдёте все мои следы!",
-    mood: "angry"
-  },
-  {
-    character: "void",
     text: "Но... как вы это делаете? Мои цепи разрушаются...",
-    mood: "happy"  // ← Удивлённый
+    mood: "happy"
   },
   {
     character: "void",

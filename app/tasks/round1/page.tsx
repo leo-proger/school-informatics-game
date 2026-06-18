@@ -178,6 +178,7 @@ export default function Round1Page() {
           avatar={character.avatarPlaceholder}
           color={character.color}
           text={line.text}
+          mood={line.mood}
           onNext={() => {
             if (prologueIndex < prologue.length - 1) {
               setPrologueIndex(prologueIndex + 1);
@@ -254,6 +255,7 @@ export default function Round1Page() {
           avatar={character.avatarPlaceholder}
           color={character.color}
           text={currentLine.text}
+          mood={currentLine.mood}
           onNext={() => {
             if (taskDialogIndex < dialogLines.length - 1) {
               setTaskDialogIndex(taskDialogIndex + 1);
@@ -287,6 +289,7 @@ export default function Round1Page() {
           avatar={character.avatarPlaceholder}
           color={character.color}
           text={currentLine.text}
+          mood={currentLine.mood}
           onNext={() => {
             if (r1cIdx < round1Complete.length - 1) {
               setR1cIdx(r1cIdx + 1);
