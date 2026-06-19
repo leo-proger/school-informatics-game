@@ -10,26 +10,14 @@ import GlassPanel from "@/app/components/ui/GlassPanel";
 import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
 import { prologue, round1Complete, taskDialogs } from "@/app/data/dialogues";
-import { supabase } from "@/app/lib/supabase";
+import { useAuth } from "@/app/lib/auth-context";
 import { DIFFICULTY_POINTS, generateNodes } from "@/app/lib/game-utils";
 import { GameTask } from "@/app/lib/types";
-
-const SESSION_KEY = "phoenix_session";
-
-async function addScore(points: number) {
-  const teamId = localStorage.getItem(SESSION_KEY);
-  if (!teamId) return;
-  const { data } = await supabase.from("teams").select("score").eq("id", teamId).single();
-  if (data) {
-    await supabase.from("teams").update({ score: (data.score ?? 0) + points }).eq("id", teamId);
-  }
-}
-
-async function setTour1Completed() {
-  const teamId = localStorage.getItem(SESSION_KEY);
-  if (!teamId) return;
-  await supabase.from("teams").update({ tour1_completed: true }).eq("id", teamId);
-}
+import { addScore } from "@/app/lib/game-actions";
+import { useVideoPreload, useAutoSaveProgress } from "@/app/lib/game-hooks";
+import { supabase } from "@/app/lib/supabase";
+import VideoPlayer from "@/app/components/ui/VideoPlayer";
+import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
 
 export const SAVE_KEY = "phoenix_round1_progress";
 
@@ -37,9 +25,9 @@ type Phase =
   | "video" | "prologue" | "round1" | "taskDialogue"
   | "round1Complete" | "round1Code" | "round1Outro";
 
-
 export default function Round1Page() {
   const router = useRouter();
+  const { team, isLoading } = useAuth();
   const [loaded, setLoaded] = useState(false);
   const [tasks, setTasks] = useState<GameTask[]>([]);
   const [failedTasks, setFailedTasks] = useState<string[]>([]);
@@ -54,23 +42,21 @@ export default function Round1Page() {
   const [r1cIdx, setR1cIdx] = useState(0);
   const [accessCode, setAccessCode] = useState("");
 
-  // Предзагрузка видео сразу при монтировании
+  // Блокировка — тур уже пройден
   useEffect(() => {
-    const srcs = ["/videos/promo.mp4", "/videos/2.mp4"];
-    const elements = srcs.map((src) => {
-      const v = document.createElement("video");
-      v.src = src;
-      v.preload = "auto";
-      v.muted = true;
-      v.style.cssText = "position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0;pointer-events:none";
-      document.body.appendChild(v);
-      return v;
-    });
-    return () => elements.forEach((v) => document.body.removeChild(v));
-  }, []);
+    if (!isLoading && team?.tour1Completed) {
+      router.replace("/tasks");
+    }
+  }, [isLoading, team, router]);
 
-  // Загрузка заданий из Supabase + восстановление сохранения
+  // Предзагрузка видео сразу при монтировании
+  useVideoPreload(["/videos/promo.mp4", "/videos/2.mp4"]);
+
+  // Загрузка заданий из Supabase + восстановление сохранения.
+  // Ждём окончания авторизации: AuthProvider синхронизирует localStorage с БД
+  // (syncProgressFromRow) — иначе можно прочитать устаревший прогресс до сброса.
   useEffect(() => {
+    if (isLoading || loaded) return;
     supabase
       .from("tasks")
       .select("*")
@@ -80,14 +66,13 @@ export default function Round1Page() {
         const loaded: GameTask[] = (data ?? []).map((row) => ({
           id: row.id,
           title: row.title,
-          description: row.description,
+          description: row.description?.replace(/\\n/g, "\n"),
           answer: row.answer,
-          hint: row.hint ?? undefined,
+          hint: row.hint?.replace(/\\n/g, "\n") ?? undefined,
           difficulty: row.difficulty,
           timeLimit: row.time_limit ?? undefined,
           taskNumber: row.task_number,
         }));
-        /* eslint-disable react-hooks/set-state-in-effect */
         setTasks(loaded);
 
         try {
@@ -110,31 +95,23 @@ export default function Round1Page() {
         } catch {
           setActiveTaskId(loaded[0]?.id ?? "");
         }
-        /* eslint-enable react-hooks/set-state-in-effect */
         setLoaded(true);
       });
-  }, []);
+  }, [isLoading, loaded]);
 
-  // Автосохранение
-  useEffect(() => {
-    if (!loaded) return;
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({
-        phase,
-        prologueIndex,
-        completedTasks,
-        activeTaskId,
-        collectedLetters,
-        pendingTaskId,
-        taskDialogIndex,
-        r1cIdx,
-        failedTasks,
-        accessCode,
-        savedAt: new Date().toISOString(),
-      }));
-    } catch {}
-  }, [loaded, phase, prologueIndex, completedTasks, activeTaskId, collectedLetters,
-      pendingTaskId, taskDialogIndex, r1cIdx, failedTasks, accessCode]);
+  // Автосохранение в localStorage + Supabase (debounce 2s)
+  useAutoSaveProgress(SAVE_KEY, "round1_progress", {
+    phase,
+    prologueIndex,
+    completedTasks,
+    activeTaskId,
+    collectedLetters,
+    pendingTaskId,
+    taskDialogIndex,
+    r1cIdx,
+    failedTasks,
+    accessCode,
+  }, loaded);
 
   const handleTaskSubmit = useCallback((value: string) => {
     const task = tasks.find(t => t.id === activeTaskId);
@@ -145,8 +122,11 @@ export default function Round1Page() {
       ? task.answer.some(a => a.toLowerCase() === normalized)
       : task.answer.toLowerCase() === normalized;
 
+    let newCompleted = completedTasks;
+    let newFailed = failedTasks;
+
     if (isCorrect) {
-      const newCompleted = [...completedTasks, activeTaskId];
+      newCompleted = [...completedTasks, activeTaskId];
       setCompletedTasks(newCompleted);
 
       const points = DIFFICULTY_POINTS[task.difficulty] ?? 100;
@@ -158,55 +138,34 @@ export default function Round1Page() {
       setCollectedLetters(newLetters);
 
       localStorage.setItem("collectedLetters", JSON.stringify(newLetters));
-
-      if (newCompleted.length >= tasks.length) {
-        setPhase("round1Complete");
-        setActiveTaskId("");
-      } else {
-        const nextTask = tasks.find(t => !newCompleted.includes(t.id) && !failedTasks.includes(t.id));
-        if (nextTask) {
-          setPendingTaskId(nextTask.id);
-          setTaskDialogIndex(0);
-          setPhase("taskDialogue");
-        }
-      }
     } else {
-      setFailedTasks(prev => [...prev, activeTaskId]);
+      newFailed = [...failedTasks, activeTaskId];
+      setFailedTasks(newFailed);
+    }
+
+    // Тур завершён, когда все задания решены (выполнены или провалены)
+    const allResolved = tasks.every(t => newCompleted.includes(t.id) || newFailed.includes(t.id));
+    if (allResolved) {
+      setPhase("round1Complete");
+      setActiveTaskId("");
+    } else if (isCorrect) {
+      const nextTask = tasks.find(t => !newCompleted.includes(t.id) && !newFailed.includes(t.id));
+      if (nextTask) {
+        setPendingTaskId(nextTask.id);
+        setTaskDialogIndex(0);
+        setPhase("taskDialogue");
+      }
     }
 
     return isCorrect;
   }, [tasks, activeTaskId, completedTasks, failedTasks, collectedLetters]);
 
-  if (!loaded) {
-    return (
-      <div className="fixed inset-0 bg-[#050816] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (!loaded) return <LoadingSpinner />;
 
   // ==================== РЕНДЕР ====================
 
   if (phase === "video") {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center bg-black">
-        <video
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          onEnded={() => setPhase("prologue")}
-        >
-          <source src="/videos/promo.mp4" type="video/mp4" />
-          Ваш браузер не поддерживает видео.
-        </video>
-        <button
-          onClick={() => setPhase("prologue")}
-          className="fixed bottom-10 right-10 z-50 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
-        >
-          Пропустить ↓
-        </button>
-      </div>
-    );
+    return <VideoPlayer src="/videos/promo.mp4" onEnded={() => setPhase("prologue")} onSkip={() => setPhase("prologue")} />;
   }
 
   if (phase === "prologue") {
@@ -268,6 +227,18 @@ export default function Round1Page() {
           hint={tasks.find(t => t.id === activeTaskId)?.hint}
           onClose={() => setModalOpen(false)}
           onSubmit={handleTaskSubmit}
+          onTimeout={() => {
+            if (activeTaskId && !completedTasks.includes(activeTaskId) && !failedTasks.includes(activeTaskId)) {
+              const newFailed = [...failedTasks, activeTaskId];
+              setFailedTasks(newFailed);
+              const allResolved = tasks.every(t => completedTasks.includes(t.id) || newFailed.includes(t.id));
+              if (allResolved) {
+                setPhase("round1Complete");
+                setActiveTaskId("");
+              }
+            }
+            setModalOpen(false);
+          }}
           timeLimit={tasks.find(t => t.id === activeTaskId)?.timeLimit}
           isCompleted={activeTaskId ? completedTasks.includes(activeTaskId) : false}
           isFailed={activeTaskId ? failedTasks.includes(activeTaskId) : false}
@@ -405,27 +376,7 @@ export default function Round1Page() {
 
   // ============ ПРОМО-РОЛИК ПОСЛЕ 1 ТУРА ============
   if (phase === "round1Outro") {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center bg-black">
-        <video
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          onEnded={() => {
-            router.push("/tasks");
-          }}
-        >
-          <source src="/videos/2.mp4" type="video/mp4" />
-          Ваш браузер не поддерживает видео.
-        </video>
-        <button
-          onClick={() => router.push("/tasks")}
-          className="fixed bottom-10 right-10 z-50 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
-        >
-          Пропустить ↓
-        </button>
-      </div>
-    );
+    return <VideoPlayer src="/videos/2.mp4" onEnded={() => router.push("/tasks")} onSkip={() => router.push("/tasks")} />;
   }
 
   return null;

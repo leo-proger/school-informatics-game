@@ -16,28 +16,28 @@ export default function NeonButton({
 }: NeonButtonProps) {
   const colorStyles = {
     cyan: {
-      border: "border-cyan-400/40",
-      bg: "bg-cyan-500/10",
-      text: "text-cyan-300",
-      hover: "hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] hover:bg-cyan-500/20",
+      border: "border-cyan-400/50",
+      bg: "bg-cyan-500/20",
+      text: "text-cyan-200",
+      hover: "hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] hover:bg-cyan-500/30",
     },
     purple: {
-      border: "border-fuchsia-400/40",
-      bg: "bg-fuchsia-500/10",
-      text: "text-fuchsia-300",
-      hover: "hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] hover:bg-fuchsia-500/20",
+      border: "border-fuchsia-400/50",
+      bg: "bg-fuchsia-500/20",
+      text: "text-fuchsia-200",
+      hover: "hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] hover:bg-fuchsia-500/30",
     },
     red: {
-      border: "border-red-400/40",
-      bg: "bg-red-500/10",
-      text: "text-red-300",
-      hover: "hover:shadow-[0_0_30px_rgba(248,113,113,0.5)] hover:bg-red-500/20",
+      border: "border-red-400/50",
+      bg: "bg-red-500/20",
+      text: "text-red-200",
+      hover: "hover:shadow-[0_0_30px_rgba(248,113,113,0.5)] hover:bg-red-500/30",
     },
     yellow: {
-      border: "border-yellow-400/40",
-      bg: "bg-yellow-500/10",
-      text: "text-yellow-300",
-      hover: "hover:shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:bg-yellow-500/20",
+      border: "border-yellow-400/50",
+      bg: "bg-yellow-500/20",
+      text: "text-yellow-200",
+      hover: "hover:shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:bg-yellow-500/30",
     },
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from './supabase';
 
 export interface Participant {
@@ -31,6 +31,7 @@ interface AuthContextValue extends AuthState {
   login: (name: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (teamData: { name: string; password: string; isAdmin: boolean }, participants: Omit<Participant, 'id'>[]) => Promise<{ success: boolean; error?: string }>;
+  refreshTeam: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -51,13 +52,35 @@ function rowToTeam(row: Record<string, unknown>, participants: Participant[]): T
   };
 }
 
-async function fetchTeamById(id: string): Promise<Team | null> {
+function syncProgressFromRow(row: Record<string, unknown>) {
+  const r1 = row.round1_progress as Record<string, unknown> | null;
+  const r2 = row.round2_progress as Record<string, unknown> | null;
+
+  if (r1) {
+    localStorage.setItem('phoenix_round1_progress', JSON.stringify(r1));
+    if (r1.collectedLetters) {
+      localStorage.setItem('collectedLetters', JSON.stringify(r1.collectedLetters));
+    }
+  } else {
+    localStorage.removeItem('phoenix_round1_progress');
+    localStorage.removeItem('round1Completed');
+    localStorage.removeItem('collectedLetters');
+  }
+
+  if (r2) {
+    localStorage.setItem('phoenix_round2_progress', JSON.stringify(r2));
+  } else {
+    localStorage.removeItem('phoenix_round2_progress');
+  }
+}
+
+async function fetchTeamById(id: string): Promise<{ team: Team | null; row: Record<string, unknown> | null }> {
   const { data: teamRow, error } = await supabase
     .from('teams')
     .select('*')
     .eq('id', id)
     .single();
-  if (error || !teamRow) return null;
+  if (error || !teamRow) return { team: null, row: null };
 
   const { data: participantRows } = await supabase
     .from('participants')
@@ -71,7 +94,7 @@ async function fetchTeamById(id: string): Promise<Team | null> {
     school: p.school,
   }));
 
-  return rowToTeam(teamRow, participants);
+  return { team: rowToTeam(teamRow, participants), row: teamRow };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -84,9 +107,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({ team: null, isLoading: false });
       return;
     }
-    fetchTeamById(sessionId).then(team => {
+    fetchTeamById(sessionId).then(({ team, row }) => {
+      if (row) syncProgressFromRow(row);
       setState({ team, isLoading: false });
     });
+  }, []);
+
+  const refreshTeam = useCallback(async () => {
+    const sessionId = localStorage.getItem(SESSION_KEY);
+    if (!sessionId) return;
+    const { team, row } = await fetchTeamById(sessionId);
+    if (row) syncProgressFromRow(row);
+    setState(prev => ({ ...prev, team }));
   }, []);
 
   const login = async (name: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -113,6 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const team = rowToTeam(teamRow, participants);
     localStorage.setItem(SESSION_KEY, team.id);
+    syncProgressFromRow(teamRow);
+
     setState({ team, isLoading: false });
     return { success: true };
   };
@@ -183,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, register }}>
+    <AuthContext.Provider value={{ ...state, login, logout, register, refreshTeam }}>
       {children}
     </AuthContext.Provider>
   );

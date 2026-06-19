@@ -66,10 +66,10 @@ function Input({ label, value, onChange, type = "text", rows }: {
   label: string; value: string | number; onChange: (v: string) => void;
   type?: string; rows?: number;
 }) {
-  const base = "w-full bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors";
+  const base = "w-full bg-slate-900/90 border border-cyan-500/40 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/80 transition-colors";
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs text-muted mb-1">{label}</label>
       {rows ? (
         <textarea rows={rows} value={value} onChange={e => onChange(e.target.value)} className={base} />
       ) : (
@@ -85,9 +85,9 @@ function Select({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs text-muted mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors">
+        className="w-full bg-slate-900/90 border border-cyan-500/40 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/80 transition-colors">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -115,7 +115,10 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 
 // ─── Teams Tab ────────────────────────────────────────────────────────────────
 
+type SortKey = "name" | "participants" | "score" | "tour1_completed" | "tour2_completed" | "registered_at";
+
 function TeamsTab() {
+  const { team: currentTeam } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -124,7 +127,23 @@ function TeamsTab() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: "team" | "participant"; id: string; name: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState<{ id: string; name: string } | null>(null);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [newParticipant, setNewParticipant] = useState({ full_name: "", city: "", school: "" });
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("score");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  const handleSort = (col: SortKey) => {
+    if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortBy(col); setSortDir("desc"); }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => (
+    <span className="ml-1 text-xs opacity-50">
+      {sortBy === col ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+    </span>
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,13 +163,46 @@ function TeamsTab() {
   const saveTeam = async () => {
     if (!editing) return;
     setSaving(true);
+
+    const original = teams.find(t => t.id === editing.id);
+    let finalScore = Number(editing.score) || 0;
+    const POINTS: Record<string, number> = { easy: 100, medium: 200, hard: 300, boss: 500 };
+    const extraUpdate: Record<string, unknown> = {};
+    let forceTour2False = false;
+
+    // Тур 1 только что отмечен как пройденный — начисляем очки за все задания
+    if (editing.tour1_completed && !original?.tour1_completed) {
+      const { data: t1tasks } = await supabase.from("tasks").select("difficulty").eq("tour", 1);
+      const tour1Points = (t1tasks ?? []).reduce((sum, t) => sum + (POINTS[t.difficulty] ?? 100), 0);
+      finalScore += tour1Points;
+    }
+
+    // Тур 1 снят — сбрасываем прогресс обоих туров
+    if (!editing.tour1_completed && original?.tour1_completed) {
+      extraUpdate.round1_progress = null;
+      extraUpdate.round2_progress = null;
+      forceTour2False = true;
+    }
+
+    // Тур 2 только что отмечен как пройденный — начисляем 500 за каждое задание тура 2
+    if (editing.tour2_completed && !original?.tour2_completed && !forceTour2False) {
+      const { data: t2tasks } = await supabase.from("tasks").select("id").eq("tour", 2);
+      finalScore += (t2tasks ?? []).length * 500;
+    }
+
+    // Тур 2 снят — сбрасываем прогресс тура 2
+    if (!editing.tour2_completed && original?.tour2_completed) {
+      extraUpdate.round2_progress = null;
+    }
+
     await supabase.from("teams").update({
       name: editing.name,
       password: editing.password,
-      score: editing.score,
+      score: finalScore,
       is_admin: editing.is_admin,
       tour1_completed: editing.tour1_completed,
-      tour2_completed: editing.tour2_completed,
+      tour2_completed: forceTour2False ? false : editing.tour2_completed,
+      ...extraUpdate,
     }).eq("id", editing.id);
     setSaving(false);
     setEditing(null);
@@ -179,9 +231,9 @@ function TeamsTab() {
 
   const resetTeam = async (id: string, to: "tour1" | "tour2") => {
     if (to === "tour1") {
-      await supabase.from("teams").update({ score: 0, tour1_completed: false, tour2_completed: false }).eq("id", id);
+      await supabase.from("teams").update({ score: 0, tour1_completed: false, tour2_completed: false, round1_progress: null, round2_progress: null }).eq("id", id);
     } else {
-      await supabase.from("teams").update({ tour2_completed: false }).eq("id", id);
+      await supabase.from("teams").update({ tour2_completed: false, round2_progress: null }).eq("id", id);
     }
     setConfirmReset(null);
     load();
@@ -193,14 +245,42 @@ function TeamsTab() {
     load();
   };
 
+  const addParticipant = async () => {
+    if (!addingTo || !newParticipant.full_name.trim()) return;
+    setSaving(true);
+    await supabase.from("participants").insert({
+      team_id: addingTo,
+      full_name: newParticipant.full_name.trim(),
+      city: newParticipant.city.trim(),
+      school: newParticipant.school.trim(),
+    });
+    setSaving(false);
+    setAddingTo(null);
+    setNewParticipant({ full_name: "", city: "", school: "" });
+    load();
+  };
+
   const filtered = teams.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const sorted = [...filtered].sort((a, b) => {
+    let av: number | string = 0, bv: number | string = 0;
+    if (sortBy === "name") { av = a.name; bv = b.name; }
+    else if (sortBy === "participants") { av = a.participants?.length ?? 0; bv = b.participants?.length ?? 0; }
+    else if (sortBy === "score") { av = a.score; bv = b.score; }
+    else if (sortBy === "tour1_completed") { av = a.tour1_completed ? 1 : 0; bv = b.tour1_completed ? 1 : 0; }
+    else if (sortBy === "tour2_completed") { av = a.tour2_completed ? 1 : 0; bv = b.tour2_completed ? 1 : 0; }
+    else if (sortBy === "registered_at") { av = a.registered_at; bv = b.registered_at; }
+    if (av < bv) return sortDir === "asc" ? -1 : 1;
+    if (av > bv) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" /></div>;
 
   return (
-    <div>
+    <div onClick={() => setOpenMenu(null)}>
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
@@ -208,9 +288,9 @@ function TeamsTab() {
           { label: "Участников", value: teams.reduce((s, t) => s + (t.participants?.length ?? 0), 0) },
           { label: "Ср. счёт", value: teams.length ? Math.round(teams.reduce((s, t) => s + t.score, 0) / teams.length) : 0 },
         ].map(s => (
-          <div key={s.label} className="bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-4 text-center">
+          <div key={s.label} className="bg-white/[0.07] border border-cyan-500/25 rounded-lg p-4 text-center">
             <div className="text-2xl font-black text-cyan-300">{s.value}</div>
-            <div className="text-xs text-slate-500 uppercase tracking-widest mt-1">{s.label}</div>
+            <div className="text-xs text-muted uppercase tracking-widest mt-1">{s.label}</div>
           </div>
         ))}
       </div>
@@ -221,45 +301,95 @@ function TeamsTab() {
           placeholder="Поиск по названию..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
+          className="flex-1 bg-slate-900/90 border border-cyan-500/40 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/80 transition-colors"
         />
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-cyan-500/20 overflow-hidden">
+      <div className="rounded-xl border border-cyan-500/30 overflow-hidden card-glow">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-cyan-500/20 bg-cyan-500/5">
-              {["Команда", "Участников", "Счёт", "Тур 1", "Тур 2", "Адм.", ""].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs text-slate-400 uppercase tracking-wider font-medium">{h}</th>
+            <tr className="border-b border-cyan-500/25 bg-white/[0.07]">
+              {([
+                { label: "Команда", col: "name" as SortKey },
+                { label: "Участников", col: "participants" as SortKey },
+                { label: "Счёт", col: "score" as SortKey },
+                { label: "Тур 1", col: "tour1_completed" as SortKey },
+                { label: "Тур 2", col: "tour2_completed" as SortKey },
+                { label: "Адм.", col: null },
+                { label: "Дата рег.", col: "registered_at" as SortKey },
+                { label: "", col: null },
+              ]).map(({ label, col }) => (
+                <th
+                  key={label}
+                  onClick={col ? () => handleSort(col) : undefined}
+                  className={`text-left px-4 py-3 text-xs text-muted uppercase tracking-wider font-medium select-none ${col ? "cursor-pointer hover:text-slate-200 transition-colors" : ""}`}
+                >
+                  {label}{col && <SortIcon col={col} />}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((team, i) => (
+            {sorted.length === 0 && (
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-muted/50 text-sm">{search ? "Ничего не найдено" : "Нет команд"}</td></tr>
+            )}
+            {sorted.map((team, i) => (
               <React.Fragment key={team.id}>
                 <tr
-                  className={`border-b border-cyan-500/10 cursor-pointer transition-colors ${expanded === team.id ? "bg-cyan-500/8" : "hover:bg-white/3"} ${i % 2 === 0 ? "" : "bg-white/1"}`}
+                  className={`border-b border-cyan-500/10 cursor-pointer transition-colors ${expanded === team.id ? "bg-cyan-500/8" : "hover:bg-white/3"} ${team.id === currentTeam?.id ? "ring-1 ring-inset ring-cyan-400/30 bg-cyan-500/5" : i % 2 === 0 ? "" : "bg-white/1"}`}
                   onClick={() => setExpanded(expanded === team.id ? null : team.id)}
                 >
                   <td className="px-4 py-3 font-medium text-slate-100">
                     <div className="flex items-center gap-2">
                       <span>{team.name}</span>
+                      {team.id === currentTeam?.id && <span className="text-xs text-cyan-400 border border-cyan-400/30 px-1.5 py-0.5 rounded">ВЫ</span>}
                       {team.is_admin && <span className="text-xs text-yellow-400 border border-yellow-400/30 px-1.5 py-0.5 rounded">ADMIN</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-400">{team.participants?.length ?? 0}</td>
+                  <td className="px-4 py-3 text-muted">{team.participants?.length ?? 0}</td>
                   <td className="px-4 py-3 text-cyan-300 font-mono font-bold">{team.score}</td>
-                  <td className="px-4 py-3">{team.tour1_completed ? <span className="text-green-400">✓</span> : <span className="text-slate-600">—</span>}</td>
-                  <td className="px-4 py-3">{team.tour2_completed ? <span className="text-green-400">✓</span> : <span className="text-slate-600">—</span>}</td>
-                  <td className="px-4 py-3">{team.is_admin ? <span className="text-yellow-400">✓</span> : <span className="text-slate-600">—</span>}</td>
+                  <td className="px-4 py-3">{team.tour1_completed ? <span className="text-green-400">✓</span> : <span className="text-muted/50">—</span>}</td>
+                  <td className="px-4 py-3">{team.tour2_completed ? <span className="text-green-400">✓</span> : <span className="text-muted/50">—</span>}</td>
+                  <td className="px-4 py-3">{team.is_admin ? <span className="text-yellow-400">✓</span> : <span className="text-muted/50">—</span>}</td>
+                  <td className="px-4 py-3 text-muted text-xs font-mono whitespace-nowrap">{team.registered_at ? new Date(team.registered_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setEditing({ ...team })} className="px-3 py-1 rounded text-xs border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">Ред.</button>
-                      <button onClick={() => setConfirmReset({ id: team.id, name: team.name })} className="px-3 py-1 rounded text-xs border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors">Сбр.</button>
-                      <button onClick={() => setConfirmDelete({ type: "team", id: team.id, name: team.name })} className="px-3 py-1 rounded text-xs border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">Уд.</button>
+                    <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+                      {/* Dropdown menu */}
+                      <div className="relative">
+                        <button
+                          onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === team.id ? null : team.id); }}
+                          className="w-7 h-7 flex items-center justify-center rounded text-muted hover:text-slate-100 hover:bg-white/10 transition-colors text-lg leading-none"
+                        >
+                          ⋮
+                        </button>
+                        {openMenu === team.id && (
+                          <div className="absolute right-0 top-full mt-1 w-40 bg-slate-900 border border-cyan-500/30 rounded-lg shadow-xl z-20 overflow-hidden">
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditing({ ...team }); setOpenMenu(null); }}
+                              className="w-full px-4 py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/15 transition-colors"
+                            >
+                              ✏️ Редактировать
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setConfirmReset({ id: team.id, name: team.name }); setOpenMenu(null); }}
+                              className="w-full px-4 py-2.5 text-left text-sm text-yellow-400 hover:bg-yellow-500/15 transition-colors"
+                            >
+                              ↩ Сбросить прогресс
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setConfirmDelete({ type: "team", id: team.id, name: team.name }); setOpenMenu(null); }}
+                              className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/15 transition-colors"
+                            >
+                              🗑 Удалить
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Chevron expand */}
                       <svg
-                        className={`w-4 h-4 text-slate-400 ml-1 transition-transform duration-200 ${expanded === team.id ? "rotate-180" : ""}`}
+                        onClick={e => { e.stopPropagation(); setExpanded(expanded === team.id ? null : team.id); }}
+                        className={`w-4 h-4 text-muted transition-transform duration-200 cursor-pointer hover:text-slate-100 ${expanded === team.id ? "rotate-180" : ""}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -270,17 +400,23 @@ function TeamsTab() {
 
                 {expanded === team.id && (
                   <tr key={`${team.id}-exp`} className="bg-cyan-500/5">
-                    <td colSpan={7} className="px-6 py-4">
-                      <div className="text-xs text-slate-500 uppercase tracking-widest mb-3">Участники</div>
+                    <td colSpan={8} className="px-6 py-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-xs text-muted uppercase tracking-widest">Участники ({(team.participants ?? []).length})</div>
+                        <button
+                          onClick={e => { e.stopPropagation(); setAddingTo(team.id); setNewParticipant({ full_name: "", city: "", school: "" }); }}
+                          className="px-2 py-1 rounded text-xs border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                        >+ Добавить</button>
+                      </div>
                       {(team.participants ?? []).length === 0 ? (
-                        <p className="text-slate-600 text-sm">Нет участников</p>
+                        <p className="text-muted/50 text-sm">Нет участников</p>
                       ) : (
                         <div className="space-y-2">
                           {(team.participants ?? []).map(p => (
                             <div key={p.id} className="flex items-center justify-between bg-black/30 rounded px-4 py-2 text-sm">
                               <div>
                                 <span className="text-slate-100">{p.full_name}</span>
-                                <span className="text-slate-500 ml-3">{p.city} · {p.school}</span>
+                                <span className="text-muted ml-3">{p.city} · {p.school}</span>
                               </div>
                               <div className="flex gap-2">
                                 <button onClick={() => setEditParticipant({ ...p })} className="px-2 py-1 rounded text-xs border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">Ред.</button>
@@ -309,13 +445,22 @@ function TeamsTab() {
               <Input label="Пароль" value={editing.password} onChange={v => setEditing({ ...editing, password: v })} />
               <Input label="Счёт" type="number" value={editing.score} onChange={v => setEditing({ ...editing, score: Number(v) })} />
               <div className="flex gap-6">
-                {[
+                {
+                  ([
                   { key: "tour1_completed" as const, label: "Тур 1 завершён" },
                   { key: "tour2_completed" as const, label: "Тур 2 завершён" },
                   { key: "is_admin" as const, label: "Администратор" },
-                ].map(({ key, label }) => (
+                ] as const).map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editing[key]} onChange={e => setEditing({ ...editing, [key]: e.target.checked })} className="w-4 h-4 accent-cyan-400" />
+                    <input
+                      type="checkbox"
+                      checked={editing[key]}
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        setEditing(prev => prev ? { ...prev, [key]: checked } : prev);
+                      }}
+                      className="w-4 h-4 accent-cyan-400"
+                    />
                     <span className="text-sm text-slate-300">{label}</span>
                   </label>
                 ))}
@@ -326,6 +471,27 @@ function TeamsTab() {
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
               <button onClick={() => setEditing(null)} className="px-5 py-2 rounded bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-colors">Отмена</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Participant Modal */}
+      {addingTo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0a0a1a] border border-cyan-500/30 rounded-xl p-8 max-w-md w-full">
+            <h3 className="text-lg font-bold text-white mb-1">Добавить участника</h3>
+            <p className="text-muted text-xs mb-6">Команда: <span className="text-cyan-300">{teams.find(t => t.id === addingTo)?.name}</span></p>
+            <div className="space-y-4">
+              <Input label="ФИО" value={newParticipant.full_name} onChange={v => setNewParticipant(p => ({ ...p, full_name: v }))} />
+              <Input label="Город" value={newParticipant.city} onChange={v => setNewParticipant(p => ({ ...p, city: v }))} />
+              <Input label="Школа / Лицей" value={newParticipant.school} onChange={v => setNewParticipant(p => ({ ...p, school: v }))} />
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={addParticipant} disabled={saving || !newParticipant.full_name.trim()} className="px-5 py-2 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-sm hover:bg-cyan-500/30 transition-colors disabled:opacity-50">
+                {saving ? "Добавление..." : "Добавить"}
+              </button>
+              <button onClick={() => setAddingTo(null)} className="px-5 py-2 rounded bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-colors">Отмена</button>
             </div>
           </div>
         </div>
@@ -416,6 +582,7 @@ function TasksTab() {
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -464,39 +631,64 @@ function TasksTab() {
         <div className="flex gap-2">
           {([1, 2] as const).map(t => (
             <button key={t} onClick={() => setTourFilter(t)}
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${tourFilter === t ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-300" : "border border-white/10 text-slate-400 hover:text-slate-200"}`}>
+              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${tourFilter === t ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-300" : "border border-white/10 text-muted hover:text-slate-200"}`}>
               Тур {t}
             </button>
           ))}
         </div>
-        <button onClick={() => { setEditing({ ...EMPTY_TASK, tour: tourFilter, id: `task-${Date.now()}` }); setIsNew(true); }}
+        <button onClick={() => { setEditing({ ...EMPTY_TASK, tour: tourFilter, id: `t${tourFilter}-${Date.now()}` }); setIsNew(true); }}
           className="px-4 py-2 rounded text-sm border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">
           + Добавить задание
         </button>
       </div>
 
-      <div className="rounded-xl border border-cyan-500/20 overflow-hidden">
+      <div className="rounded-xl border border-cyan-500/30 overflow-hidden card-glow" onClick={() => setOpenMenu(null)}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-cyan-500/20 bg-cyan-500/5">
+            <tr className="border-b border-cyan-500/25 bg-white/[0.07]">
               {["#", "Название", "Тип", "Сложность", "Лимит (сек)", "Мин. игроков", ""].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs text-slate-400 uppercase tracking-wider font-medium">{h}</th>
+                <th key={h} className="text-left px-4 py-3 text-xs text-muted uppercase tracking-wider font-medium">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
+            {filtered.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-muted/50 text-sm">Нет заданий для тура {tourFilter}</td></tr>
+            )}
             {filtered.map((task, i) => (
-              <tr key={task.id} className={`border-b border-cyan-500/10 ${i % 2 === 0 ? "" : "bg-white/1"}`}>
-                <td className="px-4 py-3 text-slate-500 font-mono">{task.task_number}</td>
+              <tr key={task.id} className={`border-b border-cyan-500/10 transition-colors hover:bg-white/3 ${i % 2 === 0 ? "" : "bg-white/[0.02]"}`}>
+                <td className="px-4 py-3 text-muted font-mono">{task.task_number}</td>
                 <td className="px-4 py-3 text-slate-100 font-medium max-w-xs truncate">{task.title}</td>
-                <td className="px-4 py-3 text-slate-400">{task.task_type === "boss" ? "🔴 Босс" : "Обычное"}</td>
+                <td className="px-4 py-3 text-muted">{task.task_type === "boss" ? "🔴 Босс" : "Обычное"}</td>
                 <td className={`px-4 py-3 ${DIFFICULTY_COLORS[task.difficulty]}`}>{DIFFICULTY_LABELS[task.difficulty]}</td>
-                <td className="px-4 py-3 text-slate-400 font-mono">{task.time_limit}</td>
-                <td className="px-4 py-3 text-slate-400">{task.min_team_size}</td>
+                <td className="px-4 py-3 text-muted font-mono">{task.time_limit}</td>
+                <td className="px-4 py-3 text-muted">{task.min_team_size}</td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
-                    <button onClick={() => { setEditing({ ...task }); setIsNew(false); }} className="px-3 py-1 rounded text-xs border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">Ред.</button>
-                    <button onClick={() => setConfirmDelete({ id: task.id, title: task.title })} className="px-3 py-1 rounded text-xs border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">Уд.</button>
+                  <div className="flex items-center justify-end" onClick={e => e.stopPropagation()}>
+                    <div className="relative">
+                      <button
+                        onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === task.id ? null : task.id); }}
+                        className="w-7 h-7 flex items-center justify-center rounded text-muted hover:text-slate-100 hover:bg-white/10 transition-colors text-lg leading-none"
+                      >
+                        ⋮
+                      </button>
+                      {openMenu === task.id && (
+                        <div className="absolute right-0 top-full mt-1 w-44 bg-slate-900 border border-cyan-500/30 rounded-lg shadow-xl z-20 overflow-hidden">
+                          <button
+                            onClick={e => { e.stopPropagation(); setEditing({ ...task }); setIsNew(false); setOpenMenu(null); }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/15 transition-colors"
+                          >
+                            ✏️ Редактировать
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmDelete({ id: task.id, title: task.title }); setOpenMenu(null); }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/15 transition-colors"
+                          >
+                            🗑 Удалить
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -512,7 +704,7 @@ function TasksTab() {
             <h3 className="text-lg font-bold text-white mb-6">{isNew ? "Новое задание" : "Редактировать задание"}</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {isNew && <Input label="ID (уникальный)" value={editing.id} onChange={v => setEditing({ ...editing, id: v })} />}
+                {isNew && <Input label="ID (уникальный, нельзя изменить после создания)" value={editing.id} onChange={v => setEditing({ ...editing, id: v })} />}
                 <Input label="Номер задания" type="number" value={editing.task_number} onChange={v => setEditing({ ...editing, task_number: Number(v) })} />
                 <Input label="Лимит времени (сек)" type="number" value={editing.time_limit} onChange={v => setEditing({ ...editing, time_limit: Number(v) })} />
                 <Input label="Мин. участников" type="number" value={editing.min_team_size} onChange={v => setEditing({ ...editing, min_team_size: Number(v) })} />
@@ -600,11 +792,11 @@ function SettingsTab() {
 
   return (
     <div className="max-w-3xl">
-      <p className="text-sm text-slate-500 mb-8">Даты используются для управления доступом к турам и отображением таймеров на странице заданий.</p>
+      <p className="text-sm text-muted mb-8">Даты используются для управления доступом к турам и отображением таймеров на странице заданий.</p>
 
       <div className="space-y-6">
         {groups.map(group => (
-          <div key={group.groupLabel} className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-6">
+          <div key={group.groupLabel} className="bg-white/[0.07] border border-cyan-500/25 rounded-xl p-6">
             <h3 className="text-xs font-mono tracking-[0.3em] text-cyan-400 uppercase mb-5">{group.groupLabel}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {group.items.map(s => (
@@ -630,12 +822,12 @@ function SettingsTab() {
                     </label>
                   ) : (
                     <>
-                      <label className="block text-xs text-slate-400 mb-1.5">{s.label || s.key}</label>
+                      <label className="block text-xs text-muted mb-1.5">{s.label || s.key}</label>
                       <input
                         type="datetime-local"
                         value={s.value ? s.value.slice(0, 16) : ""}
                         onChange={e => update(s.key, e.target.value + ":00")}
-                        className="w-full bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
+                        className="w-full bg-slate-900/90 border border-cyan-500/40 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/80 transition-colors"
                       />
                     </>
                   )}
@@ -677,7 +869,7 @@ export default function AdminPage() {
 
   if (isLoading || !team?.isAdmin) {
     return (
-      <div className="fixed inset-0 bg-[#050816] flex items-center justify-center">
+      <div className="fixed inset-0 bg-[#0d1635] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" />
       </div>
     );
@@ -694,7 +886,7 @@ export default function AdminPage() {
           <h1 className="text-3xl font-black text-white mb-1">
             Управление <span className="text-cyan-300">ФЕНИКС</span>
           </h1>
-          <p className="text-slate-500 text-sm font-mono">Вошли как: <span className="text-yellow-400">{team.name}</span></p>
+          <p className="text-muted text-sm font-mono">Вошли как: <span className="text-yellow-400">{team.name}</span></p>
         </div>
 
         {/* Tabs */}
@@ -706,7 +898,7 @@ export default function AdminPage() {
               className={`px-5 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
                 tab === t.key
                   ? "border-cyan-400 text-cyan-300"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
+                  : "border-transparent text-muted hover:text-slate-200"
               }`}
             >
               {t.label}

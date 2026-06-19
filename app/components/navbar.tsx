@@ -21,6 +21,7 @@ export default function Navbar() {
     { href: '/tasks', label: 'Задания' },
     { href: '/leaderboard', label: 'Рейтинг' },
     { href: '/schedule', label: 'Расписание' },
+    { href: '/rules', label: 'Правила' },
     ...(team?.isAdmin ? [{ href: '/admin', label: 'Админ' }] : []),
   ];
 

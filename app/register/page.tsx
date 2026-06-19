@@ -25,10 +25,34 @@ export default function RegisterPage() {
   }, [team, isLoading, router]);
 
   const [step, setStep] = useState<1 | 2>(1);
-  const [teamForm, setTeamForm] = useState({ name: '', password: '', confirmPassword: '', isAdmin: false });
-  const [participants, setParticipants] = useState<ParticipantForm[]>([emptyParticipant()]);
+  type TeamForm = { name: string; password: string; confirmPassword: string; isAdmin: boolean };
+  const [teamForm, setTeamForm] = useState<TeamForm>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const draft = localStorage.getItem('phoenix_register_draft');
+        if (draft) {
+          const saved = JSON.parse(draft) as Partial<TeamForm>;
+          return { name: saved.name ?? '', password: '', confirmPassword: '', isAdmin: saved.isAdmin ?? false };
+        }
+      } catch {}
+    }
+    return { name: '', password: '', confirmPassword: '', isAdmin: false };
+  });
+  const [participants, setParticipants] = useState<ParticipantForm[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const draft = localStorage.getItem('phoenix_register_participants_draft');
+        if (draft) return JSON.parse(draft) as ParticipantForm[];
+      } catch {}
+    }
+    return [emptyParticipant()];
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('phoenix_register_participants_draft', JSON.stringify(participants)); } catch {}
+  }, [participants]);
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +92,10 @@ export default function RegisterPage() {
     );
     setLoading(false);
     if (result.success) {
+      try {
+        localStorage.removeItem('phoenix_register_draft');
+        localStorage.removeItem('phoenix_register_participants_draft');
+      } catch {}
       router.push('/tasks');
     } else {
       setError(result.error || 'Ошибка регистрации');
@@ -116,7 +144,14 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   value={teamForm.name}
-                  onChange={e => setTeamForm(f => ({ ...f, name: e.target.value }))}
+                  onChange={e => {
+                    const name = e.target.value;
+                    setTeamForm(f => {
+                      const next = { ...f, name };
+                      try { localStorage.setItem('phoenix_register_draft', JSON.stringify({ name: next.name, isAdmin: next.isAdmin })); } catch {}
+                      return next;
+                    });
+                  }}
                   placeholder="Phoenix Squad..."
                   className="input-neon w-full px-4 py-3 rounded-lg text-sm"
                 />

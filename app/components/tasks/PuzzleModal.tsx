@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import GlassPanel from "../ui/GlassPanel";
 import NeonButton from "../ui/NeonButton";
+import TaskDescription from "./TaskDescription";
 
 interface PuzzleModalProps {
   open: boolean;
@@ -11,6 +12,7 @@ interface PuzzleModalProps {
   hint?: string;
   onClose: () => void;
   onSubmit: (value: string) => boolean;
+  onTimeout?: () => void;
   timeLimit?: number;
   isCompleted?: boolean;
   isFailed?: boolean;
@@ -29,6 +31,7 @@ export default function PuzzleModal({
   hint,
   onClose,
   onSubmit,
+  onTimeout,
   timeLimit,
   isCompleted = false,
   isFailed = false,
@@ -60,12 +63,15 @@ export default function PuzzleModal({
       setStatus("idle");
       setHasAttempted(false);
       setShowHint(false);
+    } else if (timeLimit) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTimeLeft(timeLimit);
     }
-  }, [open]);
+  }, [open, timeLimit]);
 
   useEffect(() => {
     if (!timeLimit || !open || isReadOnly) return;
-    
+
     const timer = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
@@ -78,6 +84,15 @@ export default function PuzzleModal({
 
     return () => clearInterval(timer);
   }, [open, timeLimit, isReadOnly]);
+
+  // When timer expires on an active task → close and notify parent
+  useEffect(() => {
+    if (timeLeft === 0 && timeLimit && open && !isReadOnly) {
+      onTimeout?.();
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft]);
 
   const handleSubmit = useCallback(() => {
     if (isReadOnly || hasAttempted) return;
@@ -164,10 +179,8 @@ export default function PuzzleModal({
 
           {/* DESCRIPTION */}
           {description && (
-            <div className="mb-4 max-h-[380px] overflow-y-auto rounded border border-white/5 bg-black/20">
-              <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre overflow-x-auto p-4">
-                {description?.replace(/\\n/g, "\n")}
-              </pre>
+            <div className="mb-4 max-h-[380px] overflow-y-auto rounded border border-white/5 bg-black/20 p-4">
+              <TaskDescription text={description} />
             </div>
           )}
 
@@ -301,7 +314,7 @@ export default function PuzzleModal({
               color={isFailed ? "red" : isCompleted ? "cyan" : "cyan"} 
               onClick={onClose}
             >
-              {isCompleted ? "Закрыть" : isFailed ? "Закрыть" : "Закрыть"}
+              Закрыть
             </NeonButton>
 
             {!isReadOnly && !hasAttempted && (

@@ -8,6 +8,7 @@ export interface Round2Task {
   options: string[];
   correctAnswer: string;
   hint?: string;
+  timeLimit?: number;
 }
 
 export const round2Tasks: Round2Task[] = [
