@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 interface Props {
   speaker: string;
   avatar: string;
@@ -7,7 +9,6 @@ interface Props {
 }
 
 export default function CharacterPlate({ speaker, avatar, color }: Props) {
-  // Если avatar пустой — не показываем круг
   const showAvatar = avatar && avatar.length > 0;
 
   return (
@@ -17,8 +18,13 @@ export default function CharacterPlate({ speaker, avatar, color }: Props) {
           className="w-20 h-20 rounded-full border-2 mb-4 overflow-hidden"
           style={{ borderColor: `${color}60` }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={avatar} alt={speaker} className="w-full h-full object-cover" />
+          <Image
+            src={avatar}
+            alt={speaker}
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+          />
         </div>
       )}
       <span className="text-white/80 font-mono text-sm tracking-widest">
