@@ -9,7 +9,7 @@ import PuzzleModal from "@/app/components/tasks/PuzzleModal";
 import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
 import { round2Start, round2Complete, voidHologramDialogues } from "@/app/data/dialogues-round2";
-import { round2Tasks, checkBossAnswer } from "@/app/data/tasks-round2";
+import { Round2Task } from "@/app/data/tasks-round2";
 import { supabase } from "@/app/lib/supabase";
 
 const SESSION_KEY = "phoenix_session";
@@ -32,7 +32,7 @@ async function setTour2Completed() {
 
 export const SAVE_KEY = "phoenix_round2_progress";
 
-type Phase = "code" | "dialogue" | "boss" | "victory";
+type Phase = "intro" | "dialogue" | "boss" | "victory" | "outro";
 
 interface SavedData {
   phase?: string;
@@ -58,7 +58,7 @@ interface TaskCircle {
   height: number;
 }
 
-function generateCircles(): TaskCircle[] {
+function generateCircles(tasks: Round2Task[]): TaskCircle[] {
   const positions = [
     { x: 15, y: 30 },
     { x: 70, y: 25 },
@@ -75,24 +75,25 @@ function generateCircles(): TaskCircle[] {
     { w: 170, h: 170 },
   ];
 
-  return positions.map((pos, i) => ({
-    id: round2Tasks[i].id,
-    x: pos.x,
-    y: pos.y,
+  return tasks.map((task, i) => ({
+    id: task.id,
+    x: (positions[i] ?? { x: 50, y: 50 }).x,
+    y: (positions[i] ?? { x: 50, y: 50 }).y,
     completed: false,
     failed: false,
     active: i === 0,
-    shortTitle: round2Tasks[i].shortTitle,
-    width: sizes[i].w,
-    height: sizes[i].h,
+    shortTitle: task.shortTitle,
+    width: (sizes[i] ?? { w: 170, h: 170 }).w,
+    height: (sizes[i] ?? { w: 170, h: 170 }).h,
   }));
 }
 
 export default function Round2Page() {
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
-  const [collectedLetters, setCollectedLetters] = useState<string[]>([]); // used in TopHUD via round1 letters
-  const [phase, setPhase] = useState<Phase>("dialogue");
+  const [tasks, setTasks] = useState<Round2Task[]>([]);
+  const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
+  const [phase, setPhase] = useState<Phase>("intro");
   const [dialogueIndex, setDialogueIndex] = useState(0);
   const [victoryIndex, setVictoryIndex] = useState(0);
   const [showVictoryOverlay, setShowVictoryOverlay] = useState(false);
@@ -113,41 +114,62 @@ export default function Round2Page() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedLetters) setCollectedLetters(JSON.parse(savedLetters));
 
-    let savedData: SavedData = {};
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) {
-        savedData = JSON.parse(raw) as SavedData;
-        setPhase((savedData.phase === "code" ? "dialogue" : savedData.phase ?? "dialogue") as Phase);
-        setDialogueIndex(savedData.dialogueIndex ?? 0);
-        setVictoryIndex(savedData.victoryIndex ?? 0);
-        setCompletedTasks(savedData.completedTasks ?? []);
-        setFailedTasks(savedData.failedTasks ?? []);
-        setActiveTaskIndex(savedData.activeTaskIndex ?? 0);
-        setShowVoidHologram(savedData.showVoidHologram ?? false);
-        setShowHologramDialogue(savedData.showHologramDialogue ?? false);
-        setHologramIndex(savedData.hologramIndex ?? 0);
-      }
-    } catch {}
+    supabase
+      .from("tasks")
+      .select("*")
+      .eq("tour", 2)
+      .order("task_number")
+      .then(({ data }) => {
+        const loadedTasks: Round2Task[] = (data ?? []).map((row) => ({
+          id: row.id,
+          shortTitle: row.short_title ?? row.title,
+          fullTitle: row.title,
+          description: row.description,
+          options: row.options ? (JSON.parse(row.options) as string[]) : [],
+          correctAnswer: row.answer,
+          hint: row.hint ?? undefined,
+        }));
+        /* eslint-disable react-hooks/set-state-in-effect */
+        setTasks(loadedTasks);
 
-    const freshCircles = generateCircles();
-    const restoredCircles = freshCircles.map((circle) => {
-      const isCompleted = savedData?.completedTasks?.includes(circle.id) ?? false;
-      const isFailed = savedData?.failedTasks?.includes(circle.id) ?? false;
-      const resolvedActive = savedData?.activeTaskIndex !== undefined
-        ? round2Tasks[savedData.activeTaskIndex]?.id === circle.id
-        : circle.active;
+        let savedData: SavedData = {};
+        try {
+          const raw = localStorage.getItem(SAVE_KEY);
+          if (raw) {
+            savedData = JSON.parse(raw);
+            const savedPhase = (savedData.phase === "code" ? "dialogue" : savedData.phase ?? "intro") as Phase;
+            setPhase(savedPhase);
+            setDialogueIndex(savedData.dialogueIndex ?? 0);
+            setVictoryIndex(savedData.victoryIndex ?? 0);
+            setCompletedTasks(savedData.completedTasks ?? []);
+            setFailedTasks(savedData.failedTasks ?? []);
+            setActiveTaskIndex(savedData.activeTaskIndex ?? 0);
+            setShowVoidHologram(savedData.showVoidHologram ?? false);
+            setShowHologramDialogue(savedData.showHologramDialogue ?? false);
+            setHologramIndex(savedData.hologramIndex ?? 0);
+          }
+        } catch {}
 
-      return {
-        ...circle,
-        completed: isCompleted,
-        failed: isFailed,
-        active: resolvedActive && !isCompleted && !isFailed,
-      };
-    });
+        const freshCircles = generateCircles(loadedTasks);
+        const restoredCircles = freshCircles.map((circle) => {
+          const isCompleted = savedData?.completedTasks?.includes(circle.id) ?? false;
+          const isFailed = savedData?.failedTasks?.includes(circle.id) ?? false;
+          const resolvedActive = savedData?.activeTaskIndex !== undefined
+            ? loadedTasks[savedData.activeTaskIndex]?.id === circle.id
+            : circle.active;
 
-    setCircles(restoredCircles);
-    setLoaded(true);
+          return {
+            ...circle,
+            completed: isCompleted,
+            failed: isFailed,
+            active: resolvedActive && !isCompleted && !isFailed,
+          };
+        });
+
+        setCircles(restoredCircles);
+        /* eslint-enable react-hooks/set-state-in-effect */
+        setLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -196,8 +218,9 @@ export default function Round2Page() {
   const handleSubmitAnswer = useCallback(() => {
   if (!selectedAnswer) return false;
 
-  const task = round2Tasks[activeTaskIndex];
-  const isCorrect = checkBossAnswer(task, selectedAnswer);
+  const task = tasks[activeTaskIndex];
+  if (!task) return false;
+  const isCorrect = selectedAnswer === task.correctAnswer;
 
   setShowResult(isCorrect ? "correct" : "wrong");
 
@@ -218,7 +241,7 @@ export default function Round2Page() {
       )
     );
 
-    if (newCompleted.length === round2Tasks.length) {
+    if (newCompleted.length === tasks.length) {
       setTour2Completed();
       setTimeout(() => {
         setPhase("victory");
@@ -228,8 +251,8 @@ export default function Round2Page() {
     }
 
     let nextIndex = -1;
-    for (let i = 0; i < round2Tasks.length; i++) {
-      const id = round2Tasks[i].id;
+    for (let i = 0; i < tasks.length; i++) {
+      const id = tasks[i].id;
       if (!newCompleted.includes(id) && !failedTasks.includes(id)) {
         nextIndex = i;
         break;
@@ -241,7 +264,7 @@ export default function Round2Page() {
       setCircles((prev) =>
         prev.map((circle) => ({
           ...circle,
-          active: circle.id === round2Tasks[nextIndex].id,
+          active: circle.id === tasks[nextIndex].id,
         }))
       );
     }
@@ -257,8 +280,8 @@ export default function Round2Page() {
   );
 
   let nextIndex = -1;
-  for (let i = 0; i < round2Tasks.length; i++) {
-    const id = round2Tasks[i].id;
+  for (let i = 0; i < tasks.length; i++) {
+    const id = tasks[i].id;
     if (
       !completedTasks.includes(id) &&
       !failedTasks.includes(id) &&
@@ -274,24 +297,24 @@ export default function Round2Page() {
     setCircles((prev) =>
       prev.map((circle) => ({
         ...circle,
-        active: circle.id === round2Tasks[nextIndex].id,
+        active: circle.id === tasks[nextIndex].id,
       }))
     );
   }
   return false;
-}, [selectedAnswer, activeTaskIndex, completedTasks, failedTasks]);
+}, [tasks, selectedAnswer, activeTaskIndex, completedTasks, failedTasks]);
 
   const handleCircleClick = useCallback(
     (circleId: string) => {
       const circle = circles.find((c) => c.id === circleId);
       if (!circle) return;
-      const idx = round2Tasks.findIndex((t) => t.id === circleId);
+      const idx = tasks.findIndex((t) => t.id === circleId);
       if (idx !== -1) {
         setActiveTaskIndex(idx);
         setModalOpen(true);
       }
     },
-    [circles]
+    [circles, tasks]
   );
 
   if (!loaded) {
@@ -302,9 +325,27 @@ export default function Round2Page() {
     );
   }
 
-  if (phase === "code") {
-    setPhase("dialogue");
-    return null;
+  // ============ ИНТРО-РОЛИК (3.mp4) ============
+  if (phase === "intro") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-black">
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          onEnded={() => setPhase("dialogue")}
+        >
+          <source src="/videos/3.mp4" type="video/mp4" />
+          Ваш браузер не поддерживает видео.
+        </video>
+        <button
+          onClick={() => setPhase("dialogue")}
+          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+        >
+          Пропустить ↓
+        </button>
+      </div>
+    );
   }
 
   // === ДИАЛОГИ ===
@@ -387,8 +428,8 @@ export default function Round2Page() {
 
   // === БОСС-ЗАДАНИЯ ===
   if (phase === "boss") {
-    const currentTask = round2Tasks[activeTaskIndex];
-    const progress = Math.round((completedTasks.length / round2Tasks.length) * 100);
+    const currentTask = tasks[activeTaskIndex];
+    const progress = Math.round((completedTasks.length / tasks.length) * 100);
 
     const sizeMap: Record<number, { w: number; h: number }> = {
       0: { w: 200, h: 140 },
@@ -527,32 +568,8 @@ export default function Round2Page() {
   // === ПОБЕДА ===
   if (phase === "victory") {
     if (victoryIndex >= round2Complete.length) {
-      if (!showVictoryOverlay) setShowVictoryOverlay(true);
-      return (
-        <TaskBackground>
-          <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="text-center animate-in fade-in zoom-in duration-1000">
-              <div className="text-9xl mb-6">🏆</div>
-              <h1 className="text-7xl font-bold text-yellow-300 animate-pulse mb-4">ПОБЕДА!</h1>
-              <p className="text-2xl text-yellow-200/80">VOID уничтожен. NEXUS очищен.</p>
-              <p className="text-gray-400 mt-8 text-sm">
-                Ваш подвиг будет занесён в протокол Phoenix Corps
-              </p>
-              <NeonButton
-                color="cyan"
-                onClick={() => {
-                  localStorage.removeItem(SAVE_KEY);
-                  router.push("/tasks");
-                }}
-                className="mt-8"
-              >
-                ВЕРНУТЬСЯ В ПРОТОКОЛ
-              </NeonButton>
-            </div>
-          </div>
-        </TaskBackground>
-      );
+      setPhase("outro");
+      return null;
     }
 
     const line = round2Complete[victoryIndex];
@@ -569,6 +586,35 @@ export default function Round2Page() {
           onNext={() => setVictoryIndex(victoryIndex + 1)}
         />
       </TaskBackground>
+    );
+  }
+
+  // ============ АУТРО-РОЛИК (4.mp4) ============
+  if (phase === "outro") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-black">
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          onEnded={() => {
+            localStorage.removeItem(SAVE_KEY);
+            router.push("/tasks");
+          }}
+        >
+          <source src="/videos/4.mp4" type="video/mp4" />
+          Ваш браузер не поддерживает видео.
+        </video>
+        <button
+          onClick={() => {
+            localStorage.removeItem(SAVE_KEY);
+            router.push("/tasks");
+          }}
+          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+        >
+          Пропустить ↓
+        </button>
+      </div>
     );
   }
 
