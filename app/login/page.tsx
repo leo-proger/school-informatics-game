@@ -15,7 +15,12 @@ export default function LoginPage() {
       router.replace('/tasks');
     }
   }, [team, isLoading, router]);
-  const [form, setForm] = useState({ name: '', password: '' });
+  const [form, setForm] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try { return { name: localStorage.getItem('phoenix_login_draft') ?? '', password: '' }; } catch {}
+    }
+    return { name: '', password: '' };
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
@@ -31,6 +36,7 @@ export default function LoginPage() {
     const result = await login(form.name.trim(), form.password);
     setLoading(false);
     if (result.success) {
+      try { localStorage.removeItem('phoenix_login_draft'); } catch {}
       router.push('/tasks');
     } else {
       setError(result.error || 'Ошибка входа');
@@ -59,7 +65,11 @@ export default function LoginPage() {
               <input
                 type="text"
                 value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                onChange={e => {
+                  const name = e.target.value;
+                  setForm(f => ({ ...f, name }));
+                  try { localStorage.setItem('phoenix_login_draft', name); } catch {}
+                }}
                 placeholder="Введите название..."
                 className="input-neon w-full px-4 py-3 rounded-lg text-sm"
                 autoComplete="username"

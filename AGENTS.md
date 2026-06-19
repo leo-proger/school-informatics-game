@@ -26,6 +26,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ### Логика и данные
 - `app/lib/auth-context.tsx` — авторизация через Supabase: `register`, `login`, `logout`, типы `Team` и `Participant`
 - `app/lib/supabase.ts` — клиент Supabase
+- `app/lib/game-actions.ts` — общие Supabase-операции записи: `SESSION_KEY`, `addScore(points)`, `saveProgressToDB(column, progress)`; используется в обоих турах
 - `app/lib/types.ts` — общие типы: `GameTask`, `TaskNode`, `DialogueLine`
 - `app/lib/characters.ts` — 4 персонажа: `protocol`, `nexus`, `void`, `player` (тип `CharacterId`)
 - `app/lib/game-utils.ts` — утилиты: `DIFFICULTY_POINTS`, построение `TaskNode`-графа
@@ -41,7 +42,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - `app/components/dialogue/` — `DialogueBox`, `CharacterPlate`, `TypeWriter`
 - `app/components/layout/` — `Background`, `GameLayout`, `TaskBackground`, `TopHUD`
 - `app/components/tasks/` — `TaskMap`, `TaskCard`, `PuzzleModal`
-- `app/components/ui/` — `GlassPanel`, `NeonButton`, `ProgressBar`
+- `app/components/ui/` — `GlassPanel`, `NeonButton`, `ProgressBar`, `VideoPlayer`, `LoadingSpinner`
+
+`VideoPlayer` — видео с кнопкой «Пропустить»; принимает `src`, `onEnded`, `onSkip`. Используется в тур-1 (видео-заставка, аутро) и тур-2 (интро, аутро).
+`LoadingSpinner` — стандартный индикатор загрузки на весь экран; используется во всех игровых страницах.
 
 ## Страницы
 - `/` — лендинг с лором
@@ -57,12 +61,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Игровые фазы
 
 ### Тур 1 (`/tasks/round1`)
-`video` → `prologue` → `round1` → `taskDialogue` → `round1Complete` → `round2Code` → `round2Dialogue` → `round2Boss` → `victory`
+`video` → `prologue` → `round1` → `taskDialogue` → `round1Complete` → `round1Code` → `round1Outro`
 
-Поля сохранения: `phase`, `prologueIndex`, `completedTasks`, `activeTaskId`, `collectedLetters`, `pendingTaskId`, `taskDialogIndex`, `round2DialogueIndex`, `r1cIdx`, `victoryIndex`.
+Поля сохранения: `phase`, `prologueIndex`, `completedTasks`, `activeTaskId`, `collectedLetters`, `pendingTaskId`, `taskDialogIndex`, `r1cIdx`, `failedTasks`, `accessCode`.
 
 ### Тур 2 (`/tasks/round2`)
-`dialogue` → `boss` → `victory`
+`intro` → `dialogue` → `boss` → `victory` → `outro`
 
 Голограмма VOID появляется после 3 выполненных заданий. Поля сохранения: `phase`, `dialogueIndex`, `victoryIndex`, `completedTasks`, `failedTasks`, `activeTaskIndex`, `showVoidHologram`, `showHologramDialogue`, `hologramIndex`.
 

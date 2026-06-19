@@ -26,8 +26,8 @@ export default function TaskCard({
       disabled={!isClickable}
       onClick={onClick}
       className={`
-        relative w-[260px] rounded-[22px] overflow-hidden backdrop-blur-xl border transition-all duration-300 hover:scale-105 group text-left
-        ${active ? "border-cyan-400 bg-cyan-500/10 shadow-[0_0_35px_rgba(34,211,238,.35)] scale-110 z-10" : ""}
+        relative w-full rounded-[22px] overflow-hidden backdrop-blur-xl border transition-all duration-300 hover:scale-[1.03] group text-left
+        ${active ? "border-cyan-400 bg-cyan-500/10 shadow-[0_0_35px_rgba(34,211,238,.35)]" : ""}
         ${completed ? "border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,.3)]" : ""}
         ${failed ? "border-red-500 bg-red-500/10 shadow-[0_0_30px_rgba(255,0,0,.3)]" : ""}
         ${locked && !failed ? "border-white/10 bg-black/40 opacity-50 cursor-not-allowed" : ""}

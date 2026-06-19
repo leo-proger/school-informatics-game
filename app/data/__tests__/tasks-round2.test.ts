@@ -47,21 +47,20 @@ describe("getBossTask", () => {
 });
 
 describe("checkBossAnswer", () => {
-  const task5 = round2Tasks[4];
-
-  it("accepts correct answer", () => {
-    expect(checkBossAnswer(task5, "Максим")).toBe(true);
+  it("accepts each task's correctAnswer", () => {
+    for (const t of round2Tasks) {
+      expect(checkBossAnswer(t, t.correctAnswer)).toBe(true);
+    }
   });
 
-  it("rejects wrong answer", () => {
-    expect(checkBossAnswer(task5, "Диман")).toBe(false);
+  it("rejects an answer that isn't the correct one", () => {
+    for (const t of round2Tasks) {
+      expect(checkBossAnswer(t, t.correctAnswer + "_x")).toBe(false);
+    }
   });
 
-  it("is case-sensitive (exact match)", () => {
-    expect(checkBossAnswer(task5, "максим")).toBe(false);
-  });
-
-  it("task-1 correctAnswer is Все", () => {
-    expect(checkBossAnswer(round2Tasks[0], "Все")).toBe(true);
+  it("is exact-match (no trimming)", () => {
+    const t = round2Tasks[0];
+    expect(checkBossAnswer(t, " " + t.correctAnswer)).toBe(false);
   });
 });

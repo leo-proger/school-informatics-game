@@ -36,14 +36,189 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── BANNER PLACEHOLDER ── */}
-      <section className="w-full py-8 flex items-center justify-center border-y border-cyan-500/15"
-        style={{ background: 'rgba(0, 8, 22, 0.5)', minHeight: '110px' }}>
-        <div className="w-full max-w-4xl mx-4 rounded-xl border-2 border-dashed border-cyan-600/30 flex flex-col items-center justify-center py-8 gap-2"
-          style={{ background: 'rgba(0, 20, 40, 0.3)' }}>
-          <span className="text-cyan-600 text-xs font-mono tracking-widest uppercase">[ BANNER ]</span>
-          <span className="text-cyan-700 text-xs font-mono">Место для баннера / промо-изображения</span>
-        </div>
+      {/* ── BANNER SVG ── */}
+      <section className="w-full border-y border-cyan-500/15 overflow-hidden"
+        style={{ background: 'rgba(0, 6, 18, 0.6)' }}>
+        <svg
+          viewBox="0 0 1200 210"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full"
+          style={{ display: 'block', maxHeight: '240px' }}
+          aria-label="NEXUS Hackathon — Протокол Феникс"
+        >
+          <defs>
+            <radialGradient id="cg" cx="50%" cy="50%" r="35%">
+              <stop offset="0%" stopColor="#0891b2" stopOpacity="0.18"/>
+              <stop offset="100%" stopColor="#0891b2" stopOpacity="0"/>
+            </radialGradient>
+            <linearGradient id="tl" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0"/>
+              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.55"/>
+            </linearGradient>
+            <linearGradient id="tr" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.55"/>
+              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+
+          {/* Background glow */}
+          <rect width="1200" height="210" fill="url(#cg)"/>
+
+          {/* Subtle horizontal scan lines */}
+          {[30,60,90,120,150,180].map(y => (
+            <line key={y} x1="0" y1={y} x2="1200" y2={y} stroke="#22d3ee" strokeWidth="0.3" opacity="0.05"/>
+          ))}
+
+          {/* ── CORNER BRACKETS ── */}
+          {/* TL */}
+          <path d="M 18,18 L 50,18 M 18,18 L 18,50" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" strokeLinecap="round"/>
+          {/* TR */}
+          <path d="M 1182,18 L 1150,18 M 1182,18 L 1182,50" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" strokeLinecap="round"/>
+          {/* BL */}
+          <path d="M 18,192 L 50,192 M 18,192 L 18,160" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" strokeLinecap="round"/>
+          {/* BR */}
+          <path d="M 1182,192 L 1150,192 M 1182,192 L 1182,160" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" strokeLinecap="round"/>
+
+          {/* ── LEFT NETWORK ── */}
+          <circle cx="70"  cy="65"  r="7"   stroke="#0891b2" strokeWidth="1.5" fill="#0891b2" fillOpacity="0.1"/>
+          <circle cx="70"  cy="65"  r="2.5" fill="#22d3ee" opacity="0.7"/>
+          <circle cx="120" cy="105" r="5"   stroke="#22d3ee" strokeWidth="1.2" fill="#22d3ee" fillOpacity="0.08"/>
+          <circle cx="120" cy="105" r="1.8" fill="#22d3ee" opacity="0.9"/>
+          <circle cx="70"  cy="145" r="7"   stroke="#0891b2" strokeWidth="1.5" fill="#0891b2" fillOpacity="0.1"/>
+          <circle cx="70"  cy="145" r="2.5" fill="#22d3ee" opacity="0.7"/>
+
+          <line x1="70"  y1="72"  x2="70"  y2="138" stroke="#22d3ee" strokeWidth="1"   strokeDasharray="4 3" opacity="0.35"/>
+          <line x1="76"  y1="68"  x2="116" y2="102" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3"/>
+          <line x1="76"  y1="142" x2="116" y2="108" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3"/>
+
+          <circle cx="200" cy="60"  r="3.5" stroke="#22d3ee" strokeWidth="1" fill="none" opacity="0.5"/>
+          <circle cx="220" cy="105" r="3.5" stroke="#22d3ee" strokeWidth="1" fill="none" opacity="0.5"/>
+          <circle cx="200" cy="150" r="3.5" stroke="#22d3ee" strokeWidth="1" fill="none" opacity="0.5"/>
+
+          <line x1="124" y1="103" x2="197" y2="63"  stroke="#22d3ee" strokeWidth="0.7" strokeDasharray="3 3" opacity="0.2"/>
+          <line x1="124" y1="105" x2="217" y2="105" stroke="#22d3ee" strokeWidth="0.7" strokeDasharray="3 3" opacity="0.2"/>
+          <line x1="124" y1="107" x2="197" y2="147" stroke="#22d3ee" strokeWidth="0.7" strokeDasharray="3 3" opacity="0.2"/>
+
+          {/* Circuit bend left */}
+          <path d="M 280,60 L 300,80 L 340,80 L 355,60" stroke="#22d3ee" strokeWidth="0.8" fill="none" opacity="0.25"/>
+          <circle cx="280" cy="60"  r="2" fill="#22d3ee" opacity="0.4"/>
+          <circle cx="355" cy="60"  r="2" fill="#22d3ee" opacity="0.4"/>
+
+          {/* Horizontal traces left → center */}
+          <line x1="203" y1="60"  x2="500" y2="60"  stroke="url(#tl)" strokeWidth="0.9" opacity="0.6"/>
+          <line x1="223" y1="105" x2="480" y2="105" stroke="url(#tl)" strokeWidth="1.4" opacity="0.7"/>
+          <line x1="203" y1="150" x2="500" y2="150" stroke="url(#tl)" strokeWidth="0.9" opacity="0.6"/>
+
+          {/* Small dots on traces */}
+          {[280,340,400,450].map(x => <circle key={x} cx={x} cy={60}  r="1.5" fill="#22d3ee" opacity="0.35"/>)}
+          {[300,360,420].map(x => <circle key={x} cx={x} cy={150} r="1.5" fill="#22d3ee" opacity="0.35"/>)}
+
+          {/* Binary stream top */}
+          <text x="80" y="22" fill="#22d3ee" fontSize="7" fontFamily="monospace" opacity="0.12">
+            01001110 01000101 01011000 01010101 01010011
+          </text>
+
+          {/* ── RIGHT NETWORK (mirror) ── */}
+          <circle cx="1130" cy="65"  r="7"   stroke="#0891b2" strokeWidth="1.5" fill="#0891b2" fillOpacity="0.1"/>
+          <circle cx="1130" cy="65"  r="2.5" fill="#22d3ee" opacity="0.7"/>
+          <circle cx="1080" cy="105" r="5"   stroke="#22d3ee" strokeWidth="1.2" fill="#22d3ee" fillOpacity="0.08"/>
+          <circle cx="1080" cy="105" r="1.8" fill="#22d3ee" opacity="0.9"/>
+          <circle cx="1130" cy="145" r="7"   stroke="#0891b2" strokeWidth="1.5" fill="#0891b2" fillOpacity="0.1"/>
+          <circle cx="1130" cy="145" r="2.5" fill="#22d3ee" opacity="0.7"/>
+
+          <line x1="1130" y1="72"  x2="1130" y2="138" stroke="#22d3ee" strokeWidth="1"   strokeDasharray="4 3" opacity="0.35"/>
+          <line x1="1124" y1="68"  x2="1084" y2="102" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3"/>
+          <line x1="1124" y1="142" x2="1084" y2="108" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3"/>
+
+          <circle cx="1000" cy="60"  r="3.5" stroke="#22d3ee" strokeWidth="1" fill="none" opacity="0.5"/>
+          <circle cx="980"  cy="105" r="3.5" stroke="#22d3ee" strokeWidth="1" fill="none" opacity="0.5"/>
+          <circle cx="1000" cy="150" r="3.5" stroke="#22d3ee" strokeWidth="1" fill="none" opacity="0.5"/>
+
+          <line x1="1076" y1="103" x2="1003" y2="63"  stroke="#22d3ee" strokeWidth="0.7" strokeDasharray="3 3" opacity="0.2"/>
+          <line x1="1076" y1="105" x2="983"  y2="105" stroke="#22d3ee" strokeWidth="0.7" strokeDasharray="3 3" opacity="0.2"/>
+          <line x1="1076" y1="107" x2="1003" y2="147" stroke="#22d3ee" strokeWidth="0.7" strokeDasharray="3 3" opacity="0.2"/>
+
+          <path d="M 920,60 L 900,80 L 860,80 L 845,60" stroke="#22d3ee" strokeWidth="0.8" fill="none" opacity="0.25"/>
+          <circle cx="920" cy="60" r="2" fill="#22d3ee" opacity="0.4"/>
+          <circle cx="845" cy="60" r="2" fill="#22d3ee" opacity="0.4"/>
+
+          <line x1="997"  y1="60"  x2="700" y2="60"  stroke="url(#tr)" strokeWidth="0.9" opacity="0.6"/>
+          <line x1="977"  y1="105" x2="720" y2="105" stroke="url(#tr)" strokeWidth="1.4" opacity="0.7"/>
+          <line x1="997"  y1="150" x2="700" y2="150" stroke="url(#tr)" strokeWidth="0.9" opacity="0.6"/>
+
+          {[750,810,870,930].map(x => <circle key={x} cx={x} cy={60}  r="1.5" fill="#22d3ee" opacity="0.35"/>)}
+          {[760,820,880].map(x => <circle key={x} cx={x} cy={150} r="1.5" fill="#22d3ee" opacity="0.35"/>)}
+
+          <text x="730" y="22" fill="#22d3ee" fontSize="7" fontFamily="monospace" opacity="0.12">
+            01010110 01001111 01001001 01000100
+          </text>
+
+          {/* ── CENTER EMBLEM ── */}
+          {/* Outer hex r=76, flat-top, cx=600 cy=105 */}
+          {/* Points: (600,29)(666,67)(666,143)(600,181)(534,143)(534,67) */}
+          <polygon
+            points="600,29 666,67 666,143 600,181 534,143 534,67"
+            stroke="#22d3ee" strokeWidth="1.2" fill="none" opacity="0.5"
+          />
+          {/* Inner hex r=60 */}
+          <polygon
+            points="600,45 652,75 652,135 600,165 548,135 548,75"
+            stroke="#22d3ee" strokeWidth="0.6" fill="none" opacity="0.25"
+          />
+          {/* Hex vertex dots */}
+          {([[600,29],[666,67],[666,143],[600,181],[534,143],[534,67]] as [number,number][]).map(([x,y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="2.5" fill="#22d3ee" opacity="0.6"/>
+          ))}
+          {/* Subtle center fill */}
+          <polygon
+            points="600,29 666,67 666,143 600,181 534,143 534,67"
+            fill="#0891b2" fillOpacity="0.05"
+          />
+
+          {/* ── PHOENIX SILHOUETTE (cx=600, cy=105) ── */}
+          {/* Flame crown — 3 peaks */}
+          <path d="M 592,72 L 586,55 L 591,63 L 588,48 L 594,60 L 600,44 L 606,60 L 612,48 L 609,63 L 614,55 L 608,72"
+            stroke="#22d3ee" strokeWidth="1.3" fill="#22d3ee" fillOpacity="0.12" strokeLinejoin="round"/>
+          {/* Body — elongated diamond */}
+          <path d="M 600,68 L 615,100 L 600,132 L 585,100 Z"
+            stroke="#22d3ee" strokeWidth="1.5" fill="#22d3ee" fillOpacity="0.18"/>
+          {/* Inner body glow */}
+          <ellipse cx="600" cy="100" rx="9" ry="22" fill="#22d3ee" fillOpacity="0.2"/>
+          {/* Left wing */}
+          <path d="M 591,97 L 562,83 L 546,91 L 558,101 L 587,101"
+            stroke="#22d3ee" strokeWidth="1.2" fill="#22d3ee" fillOpacity="0.1" strokeLinejoin="round"/>
+          {/* Wing tip dot left */}
+          <circle cx="546" cy="91" r="2" fill="#22d3ee" opacity="0.5"/>
+          {/* Right wing */}
+          <path d="M 609,97 L 638,83 L 654,91 L 642,101 L 613,101"
+            stroke="#22d3ee" strokeWidth="1.2" fill="#22d3ee" fillOpacity="0.1" strokeLinejoin="round"/>
+          {/* Wing tip dot right */}
+          <circle cx="654" cy="91" r="2" fill="#22d3ee" opacity="0.5"/>
+          {/* Tail — 3 forks */}
+          <path d="M 592,128 L 582,148 L 586,142 L 581,157"
+            stroke="#22d3ee" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+          <path d="M 600,130 L 600,155"
+            stroke="#22d3ee" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+          <path d="M 608,128 L 618,148 L 614,142 L 619,157"
+            stroke="#22d3ee" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+          {/* Spine line */}
+          <line x1="600" y1="68" x2="600" y2="132" stroke="#67e8f9" strokeWidth="0.7" opacity="0.4"/>
+
+          {/* ── TEXT ── */}
+          <text x="600" y="17" textAnchor="middle" fill="#22d3ee"
+            fontSize="9" fontFamily="monospace" letterSpacing="7" opacity="0.65">
+            NEXUS HACKATHON
+          </text>
+          <text x="600" y="198" textAnchor="middle" fill="#94a3b8"
+            fontSize="8.5" fontFamily="monospace" letterSpacing="5" opacity="0.55">
+            ПРОТОКОЛ · 2026
+          </text>
+          <text x="600" y="208" textAnchor="middle" fill="#22d3ee"
+            fontSize="8" fontFamily="monospace" letterSpacing="4" opacity="0.4">
+            06.06 ─────────── 20.06
+          </text>
+        </svg>
       </section>
 
       {/* ── TECH INFO ── */}

@@ -17,7 +17,6 @@ interface LeaderboardTeam {
 }
 
 type FilterType = 'city' | 'school';
-type TourTab = 1 | 2;
 
 function getRankStyle(rank: number) {
   if (rank === 1) return 'rank-1';
@@ -59,7 +58,6 @@ async function fetchLeaderboard(): Promise<LeaderboardTeam[]> {
 
 export default function LeaderboardPage() {
   const { team } = useAuth();
-  const [tourTab, setTourTab] = useState<TourTab>(1);
   const [filter, setFilter] = useState<FilterType>('city');
   const [search, setSearch] = useState('');
   const [allTeams, setAllTeams] = useState<LeaderboardTeam[]>([]);
@@ -77,7 +75,8 @@ export default function LeaderboardPage() {
   }, []);
 
   useEffect(() => {
-    void reload();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void reload(); // async — setState runs after Promise resolves, not synchronously
 
     const channel = supabase
       .channel('leaderboard-realtime')
@@ -90,8 +89,7 @@ export default function LeaderboardPage() {
 
   const visibleTeams = allTeams.filter(t => showAdmins || !t.isAdmin);
 
-  const tourTeams = visibleTeams
-    .map((t, i) => ({ ...t, rank: i + 1 }));
+  const rankedTeams = visibleTeams.map((t, i) => ({ ...t, rank: i + 1 }));
 
   const filterLabel: Record<FilterType, string> = {
     city: 'По городу',
@@ -103,7 +101,7 @@ export default function LeaderboardPage() {
     school: 'school',
   };
 
-  const grouped = tourTeams.reduce<Record<string, { name: string; teams: number; totalScore: number; top3: string[] }>>((acc, t) => {
+  const grouped = rankedTeams.reduce<Record<string, { name: string; teams: number; totalScore: number; top3: string[] }>>((acc, t) => {
     const key = String(t[filterKey[filter]]) || '—';
     if (!acc[key]) acc[key] = { name: key, teams: 0, totalScore: 0, top3: [] };
     acc[key].teams++;
@@ -116,13 +114,16 @@ export default function LeaderboardPage() {
     .sort((a, b) => b.totalScore - a.totalScore)
     .map((g, i) => ({ ...g, rank: i + 1 }));
 
-  const filteredTeams = tourTeams
+  const filteredTeams = rankedTeams
     .filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.school.toLowerCase().includes(search.toLowerCase()) ||
       t.city.toLowerCase().includes(search.toLowerCase()));
 
-  const myRank = tourTeams.findIndex(t => t.id === team?.id);
-  const myLiveScore = allTeams.find(t => t.id === team?.id)?.score ?? team?.score ?? 0;
+  const myTeamLive = allTeams.find(t => t.id === team?.id);
+  const myRank = rankedTeams.findIndex(t => t.id === team?.id);
+  const myLiveScore = myTeamLive?.score ?? team?.score ?? 0;
+  const myTour1 = myTeamLive?.tour1 ?? team?.tour1Completed ?? false;
+  const myTour2 = myTeamLive?.tour2 ?? team?.tour2Completed ?? false;
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -136,32 +137,6 @@ export default function LeaderboardPage() {
           <p className="text-sm text-slate-400 font-mono">
             {loading ? 'Загрузка...' : `${visibleTeams.length} команд · Актуальные результаты хакатона`}
           </p>
-        </div>
-
-        <div className="flex justify-center mb-8">
-          <div className="flex rounded-xl overflow-hidden border border-cyan-500/20 p-1 gap-1"
-            style={{ background: 'rgba(0, 8, 22, 0.6)' }}>
-            {([1, 2] as TourTab[]).map(t => (
-              <button
-                key={t}
-                onClick={() => { setTourTab(t); setSearch(''); }}
-                className={`px-8 py-2.5 rounded-lg text-sm font-mono font-semibold tracking-widest uppercase transition-all duration-200
-                  ${tourTab === t
-                    ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/40 shadow-[0_0_12px_rgba(34,211,238,0.2)]'
-                    : 'text-slate-500 hover:text-slate-300 border border-transparent'
-                  }`}
-              >
-                ТУР {t}
-                <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-mono
-                  ${t === 1
-                    ? 'bg-cyan-500/15 text-cyan-400'
-                    : 'bg-sky-500/15 text-sky-400'
-                  }`}>
-                  {t === 1 ? visibleTeams.filter(x => x.tour1).length : visibleTeams.filter(x => x.tour2).length}
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 mb-6">
@@ -179,8 +154,7 @@ export default function LeaderboardPage() {
                       <p className="text-xs text-slate-400 font-mono">{team.participants[0]?.school}</p>
                       {myRank >= 0 && (
                         <p className="text-xs text-cyan-400 font-mono mt-1">
-                          {tourTab === 1 && team.tour1Completed ? `#${myRank + 1} в туре 1` :
-                           tourTab === 2 && team.tour2Completed ? `#${myRank + 1} в туре 2` : 'Тур не пройден'}
+                          #{myRank + 1} в общем рейтинге
                         </p>
                       )}
                     </div>
@@ -205,12 +179,12 @@ export default function LeaderboardPage() {
 
                 <div className="mt-auto pt-3 border-t border-cyan-500/10 flex gap-2">
                   <span className={`text-[10px] px-2 py-1 rounded font-mono border flex-1 text-center
-                    ${team.tour1Completed ? 'bg-green-500/15 text-green-400 border-green-500/20' : 'bg-gray-700/20 text-slate-500 border-gray-700/30'}`}>
-                    Тур 1 {team.tour1Completed ? '✓' : '—'}
+                    ${myTour1 ? 'bg-green-500/15 text-green-400 border-green-500/20' : 'bg-gray-700/20 text-slate-500 border-gray-700/30'}`}>
+                    Тур 1 {myTour1 ? '✓' : '—'}
                   </span>
                   <span className={`text-[10px] px-2 py-1 rounded font-mono border flex-1 text-center
-                    ${team.tour2Completed ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/20' : 'bg-gray-700/20 text-slate-500 border-gray-700/30'}`}>
-                    Тур 2 {team.tour2Completed ? '✓' : '—'}
+                    ${myTour2 ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/20' : 'bg-gray-700/20 text-slate-500 border-gray-700/30'}`}>
+                    Тур 2 {myTour2 ? '✓' : '—'}
                   </span>
                 </div>
               </>
@@ -228,7 +202,7 @@ export default function LeaderboardPage() {
           <div className="card-glow rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-cyan-500/10 flex items-center justify-between gap-4 flex-wrap">
               <h2 className="text-sm font-semibold text-slate-100 uppercase tracking-widest">
-                Тур {tourTab} · Все команды
+                Все команды
               </h2>
               <input
                 type="text"
@@ -309,10 +283,6 @@ export default function LeaderboardPage() {
             <div className="mt-auto pt-4 border-t border-cyan-500/10">
               <p className="text-[10px] font-mono text-slate-600 uppercase tracking-widest mb-2">Статистика</p>
               <div className="space-y-1.5 text-xs font-mono text-slate-400">
-                <div className="flex justify-between">
-                  <span>В рейтинге тура</span>
-                  <span className="text-cyan-300">{tourTeams.length}</span>
-                </div>
                 <div className="flex justify-between">
                   <span>Всего команд</span>
                   <span className="text-slate-300">{visibleTeams.length}</span>

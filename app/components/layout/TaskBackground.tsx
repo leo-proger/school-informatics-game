@@ -12,13 +12,13 @@ export default function TaskBackground({ children }: TaskBackgroundProps) {
     <div className="relative min-h-screen">
       {/* Основной фон */}
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#050816]" />
+        <div className="absolute inset-0 bg-[#0d1635]" />
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-50"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(0,255,255,.08) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,255,255,.08) 1px, transparent 1px)
+              linear-gradient(rgba(0,255,255,.15) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,255,255,.15) 1px, transparent 1px)
             `,
             backgroundSize: "50px 50px",
           }}
@@ -27,9 +27,9 @@ export default function TaskBackground({ children }: TaskBackgroundProps) {
           className="absolute inset-0"
           style={{
             background: `
-              radial-gradient(circle at 20% 30%, rgba(34,211,238,.15), transparent 30%),
-              radial-gradient(circle at 80% 10%, rgba(168,85,247,.12), transparent 25%),
-              radial-gradient(circle at 70% 80%, rgba(6,182,212,.12), transparent 35%)
+              radial-gradient(circle at 20% 30%, rgba(34,211,238,.30), transparent 30%),
+              radial-gradient(circle at 80% 10%, rgba(168,85,247,.25), transparent 25%),
+              radial-gradient(circle at 70% 80%, rgba(6,182,212,.25), transparent 35%)
             `,
           }}
         />

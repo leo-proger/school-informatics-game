@@ -87,42 +87,43 @@ export default function DialogueBox({
           />
           
           <GlassPanel>
-            <div className="flex min-h-[200px] relative z-0">
+            <div className="flex h-[220px] relative z-0">
               <CharacterPlate
                 speaker={speaker}
                 avatar=""
                 color={color}
               />
 
-              <div className="flex-1 p-10 flex flex-col justify-between">
-                <TypeWriter
-                  text={text}
-                  speed={18}
-                  onComplete={() => setReady(true)}
-                />
+              <div className="flex-1 p-10 flex flex-col justify-between min-w-0">
+                <div className="flex-1 overflow-y-auto">
+                  <TypeWriter
+                    text={text}
+                    speed={18}
+                    onComplete={() => setReady(true)}
+                  />
+                </div>
 
-                <div className="flex justify-end mt-8">
-                  {ready && (
-                    <button
-                      onClick={onNext}
-                      className="
-                        w-16
-                        h-16
-                        rounded-full
-                        border
-                        border-cyan-400/40
-                        bg-cyan-400/10
-                        text-cyan-300
-                        text-3xl
-                        transition-all
-                        hover:scale-110
-                        hover:shadow-[0_0_30px_rgba(34,211,238,.5)]
-                        animate-pulse
-                      "
-                    >
-                      ▶
-                    </button>
-                  )}
+                <div className="flex justify-end mt-4 shrink-0">
+                  <button
+                    onClick={onNext}
+                    className={`
+                      w-16
+                      h-16
+                      rounded-full
+                      border
+                      border-cyan-400/40
+                      bg-cyan-400/10
+                      text-cyan-300
+                      text-3xl
+                      transition-all
+                      hover:scale-110
+                      hover:shadow-[0_0_30px_rgba(34,211,238,.5)]
+                      animate-pulse
+                      ${ready ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
+                    `}
+                  >
+                    ▶
+                  </button>
                 </div>
               </div>
             </div>

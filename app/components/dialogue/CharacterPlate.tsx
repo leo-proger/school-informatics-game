@@ -24,6 +24,7 @@ export default function CharacterPlate({ speaker, avatar, color }: Props) {
             width={80}
             height={80}
             className="w-full h-full object-cover"
+            priority
           />
         </div>
       )}

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Background from "@/app/components/layout/Background";
 import GlassPanel from "@/app/components/ui/GlassPanel";
 import NeonButton from "@/app/components/ui/NeonButton";
+import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
 import { useAuth } from "@/app/lib/auth-context";
 import { SAVE_KEY as ROUND1_SAVE_KEY } from "./round1/page";
 import { SAVE_KEY as ROUND2_SAVE_KEY } from "./round2/page";
@@ -27,25 +28,6 @@ function getSaveLabel(raw: string | null): string | null {
   }
 }
 
-// Проверяем, пройден ли 1 тур
-function isRound1Complete(): boolean {
-  if (localStorage.getItem("round1Completed") === "true") return true;
-  
-  try {
-    const raw = localStorage.getItem(ROUND1_SAVE_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    const completed: string[] = data.completedTasks ?? [];
-    if (completed.length >= 6) return true;
-    if (data.phase === "round1Complete" || data.phase === "round1Code") return true;
-    if (data.phase === "round2Code" || data.phase === "round2Dialogue" || 
-        data.phase === "round2Boss" || data.phase === "victory") return true;
-    return false;
-  } catch {
-    return false;
-  }
-}
-
 // Проверяем, есть ли сохранение для 2 тура
 function hasRound2Save(): boolean {
   try {
@@ -60,12 +42,15 @@ function hasRound2Save(): boolean {
 
 export default function TasksPage() {
   const router = useRouter();
-  const { team, isLoading } = useAuth();
+  const { team, isLoading, refreshTeam } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
   const [showRound2Reset, setShowRound2Reset] = useState(false);
   const [saveLabel, setSaveLabel] = useState<string | null>(null);
-  const [round2Unlocked, setRound2Unlocked] = useState(false);
-  const [round1Completed, setRound1Completed] = useState(false);
   const [round2HasSave, setRound2HasSave] = useState(false);
 
   useEffect(() => {
@@ -74,24 +59,25 @@ export default function TasksPage() {
     }
   }, [team, isLoading, router]);
 
+  // Синхронизируем состояние с БД при каждом открытии страницы
+  useEffect(() => {
+    void refreshTeam();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const raw = localStorage.getItem(ROUND1_SAVE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaveLabel(getSaveLabel(raw));
-
-    const isDone = isRound1Complete();
-    setRound1Completed(isDone);
-    setRound2Unlocked(isDone);
     setRound2HasSave(hasRound2Save());
   }, []);
 
-  if (isLoading || !team) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#050816' }}>
-        <div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  // Источник истины — БД (team.tour1Completed), а не localStorage
+  const round1Completed = team?.tour1Completed ?? false;
+  const round2Completed = team?.tour2Completed ?? false;
+  const round2Unlocked = team?.tour1Completed ?? false;
+
+  if (isLoading || !team) return <LoadingSpinner />;
 
   const handleContinue = () => {
     router.push("/tasks/round1");
@@ -142,7 +128,7 @@ export default function TasksPage() {
                     <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.8)]" />
                     СОХРАНЕНИЕ НАЙДЕНО
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">{saveLabel}</span>
+                  <span className="text-xs text-slate-300 font-mono">{saveLabel}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-xs font-mono text-green-400">
@@ -156,15 +142,16 @@ export default function TasksPage() {
           {/* Тур 2 */}
           {round2Unlocked ? (
             <div className="relative group">
-              <div 
+              <div
                 onClick={() => {
+                  if (round2Completed) return;
                   if (round2HasSave) {
                     setShowRound2Reset(true);
                   } else {
                     router.push("/tasks/round2");
                   }
-                }} 
-                className="cursor-pointer"
+                }}
+                className={round2Completed ? "cursor-default" : "cursor-pointer"}
               >
                 <GlassPanel className="p-8 flex flex-col items-center text-center hover:border-red-400/60 transition-all duration-300 h-full border-red-500/20">
                   <div className="w-16 h-16 rounded-full border-2 border-red-400/50 flex items-center justify-center mb-5
@@ -176,10 +163,17 @@ export default function TasksPage() {
                   <p className="text-slate-400 text-sm leading-relaxed mb-6">
                     Финальное столкновение с VOID. Введите код доступа и уничтожьте вирус!
                   </p>
-                  <div className="flex items-center gap-2 text-xs font-mono text-green-400">
-                    <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
-                    ДОСТУПЕН
-                  </div>
+                  {round2Completed ? (
+                    <div className="flex items-center gap-2 text-xs font-mono text-green-400">
+                      <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+                      ТУР 2 ЗАВЕРШЁН
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs font-mono text-green-400">
+                      <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+                      ДОСТУПЕН
+                    </div>
+                  )}
                   {round2HasSave && (
                     <div className="mt-2 text-xs font-mono text-yellow-400/70">
                       ⚡ Есть сохранение
@@ -191,23 +185,23 @@ export default function TasksPage() {
           ) : (
             <GlassPanel className="p-8 flex flex-col items-center text-center opacity-50 cursor-not-allowed border-gray-700/40">
               <div className="w-16 h-16 rounded-full border-2 border-gray-600/40 flex items-center justify-center mb-5">
-                <svg className="w-7 h-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-7 h-7 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round"
                     d="M16.5 10.5V7.5a4.5 4.5 0 00-9 0v3M5.25 10.5h13.5a.75.75 0 01.75.75v8.25a.75.75 0 01-.75.75H5.25a.75.75 0 01-.75-.75V11.25a.75.75 0 01.75-.75z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-gray-400 tracking-wide mb-2">ТУР 2</h2>
-              <p className="text-xs text-gray-500 tracking-widest uppercase font-mono mb-4">VOID PROTOCOL</p>
-              <p className="text-gray-600 text-sm leading-relaxed mb-6">
+              <h2 className="text-xl font-bold text-gray-100 tracking-wide mb-2">ТУР 2</h2>
+              <p className="text-xs text-gray-200 tracking-widest uppercase font-mono mb-4">VOID PROTOCOL</p>
+              <p className="text-gray-200 text-sm leading-relaxed mb-6">
                 Финальное столкновение с VOID. Требуется завершить Тур 1.
               </p>
-              <div className="flex items-center gap-2 text-xs font-mono text-gray-600">
+              <div className="flex items-center gap-2 text-xs font-mono text-gray-200">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
                 </svg>
                 ЗАБЛОКИРОВАНО
               </div>
-              <p className="text-gray-700 text-xs mt-2 font-mono">
+              <p className="text-gray-200 text-xs mt-2 font-mono">
                 Требуется завершить 6 заданий в Туре 1
               </p>
             </GlassPanel>
@@ -215,14 +209,30 @@ export default function TasksPage() {
         </div>
 
         {/* Статус прогресса */}
-        {round1Completed && (
+        {round2Completed ? (
+          <div className="mt-8 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-3 text-green-400 text-sm font-mono">
+                <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.6)] animate-pulse" />
+                ОБА ТУРА ПРОЙДЕНЫ — ПРОТОКОЛ ФЕНИКС ЗАВЕРШЁН
+              </div>
+              <p className="text-slate-400 text-xs font-mono">Отличная работа! Можешь проверить свою позицию в рейтинге.</p>
+              <button
+                onClick={() => router.push("/leaderboard")}
+                className="mt-1 px-5 py-2 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 text-xs font-mono hover:bg-cyan-500/20 transition-colors"
+              >
+                ПОСМОТРЕТЬ РЕЙТИНГ →
+              </button>
+            </div>
+          </div>
+        ) : round1Completed ? (
           <div className="mt-8 text-center">
             <div className="flex items-center gap-3 text-green-400 text-sm font-mono">
               <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.6)] animate-pulse" />
               ТУР 1 ЗАВЕРШЁН — ТУР 2 РАЗБЛОКИРОВАН
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Confirmation modal для Тура 1 */}
