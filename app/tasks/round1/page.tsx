@@ -9,10 +9,10 @@ import DialogueBox from "@/app/components/dialogue/DialogueBox";
 import GlassPanel from "@/app/components/ui/GlassPanel";
 import NeonButton from "@/app/components/ui/NeonButton";
 import { getCharacter } from "@/app/lib/characters";
-import { round1Tasks, getTask, checkAnswer } from "@/app/data/tasks-round1";
 import { prologue, round1Complete, taskDialogs } from "@/app/data/dialogues";
 import { supabase } from "@/app/lib/supabase";
 import { DIFFICULTY_POINTS, generateNodes } from "@/app/lib/game-utils";
+import { GameTask } from "@/app/lib/types";
 
 const SESSION_KEY = "phoenix_session";
 
@@ -41,11 +41,12 @@ type Phase =
 export default function Round1Page() {
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
+  const [tasks, setTasks] = useState<GameTask[]>([]);
   const [failedTasks, setFailedTasks] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>("video");
   const [prologueIndex, setPrologueIndex] = useState(0);
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
-  const [activeTaskId, setActiveTaskId] = useState<string>(round1Tasks[0].id);
+  const [activeTaskId, setActiveTaskId] = useState<string>("");
   const [modalOpen, setModalOpen] = useState(false);
   const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
@@ -53,27 +54,50 @@ export default function Round1Page() {
   const [r1cIdx, setR1cIdx] = useState(0);
   const [accessCode, setAccessCode] = useState("");
 
-  // Загрузка сохранения при монтировании
+  // Загрузка заданий из Supabase + восстановление сохранения
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
+    supabase
+      .from("tasks")
+      .select("*")
+      .eq("tour", 1)
+      .order("task_number")
+      .then(({ data }) => {
+        const loaded: GameTask[] = (data ?? []).map((row) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          answer: row.answer,
+          hint: row.hint ?? undefined,
+          difficulty: row.difficulty,
+          timeLimit: row.time_limit ?? undefined,
+          taskNumber: row.task_number,
+        }));
         /* eslint-disable react-hooks/set-state-in-effect */
-        setPhase(data.phase === "video" ? "prologue" : (data.phase ?? "prologue"));
-        setPrologueIndex(data.prologueIndex ?? 0);
-        setCompletedTasks(data.completedTasks ?? []);
-        setActiveTaskId(data.activeTaskId ?? round1Tasks[0].id);
-        setCollectedLetters(data.collectedLetters ?? []);
-        setPendingTaskId(data.pendingTaskId ?? null);
-        setTaskDialogIndex(data.taskDialogIndex ?? 0);
-        setR1cIdx(data.r1cIdx ?? 0);
-        setFailedTasks(data.failedTasks ?? []);
-        setAccessCode(data.accessCode ?? "");
+        setTasks(loaded);
+
+        try {
+          const raw = localStorage.getItem(SAVE_KEY);
+          if (raw) {
+            const savedData = JSON.parse(raw);
+            setPhase(savedData.phase === "video" ? "prologue" : (savedData.phase ?? "prologue"));
+            setPrologueIndex(savedData.prologueIndex ?? 0);
+            setCompletedTasks(savedData.completedTasks ?? []);
+            setActiveTaskId(savedData.activeTaskId ?? loaded[0]?.id ?? "");
+            setCollectedLetters(savedData.collectedLetters ?? []);
+            setPendingTaskId(savedData.pendingTaskId ?? null);
+            setTaskDialogIndex(savedData.taskDialogIndex ?? 0);
+            setR1cIdx(savedData.r1cIdx ?? 0);
+            setFailedTasks(savedData.failedTasks ?? []);
+            setAccessCode(savedData.accessCode ?? "");
+          } else {
+            setActiveTaskId(loaded[0]?.id ?? "");
+          }
+        } catch {
+          setActiveTaskId(loaded[0]?.id ?? "");
+        }
         /* eslint-enable react-hooks/set-state-in-effect */
-      }
-    } catch {}
-    setLoaded(true);
+        setLoaded(true);
+      });
   }, []);
 
   // Автосохранение
@@ -98,10 +122,13 @@ export default function Round1Page() {
       pendingTaskId, taskDialogIndex, r1cIdx, failedTasks, accessCode]);
 
   const handleTaskSubmit = useCallback((value: string) => {
-    const task = getTask(activeTaskId);
+    const task = tasks.find(t => t.id === activeTaskId);
     if (!task) return false;
 
-    const isCorrect = checkAnswer(task, value);
+    const normalized = value.trim().toLowerCase();
+    const isCorrect = Array.isArray(task.answer)
+      ? task.answer.some(a => a.toLowerCase() === normalized)
+      : task.answer.toLowerCase() === normalized;
 
     if (isCorrect) {
       const newCompleted = [...completedTasks, activeTaskId];
@@ -114,14 +141,14 @@ export default function Round1Page() {
       const nextLetter = word[newCompleted.length - 1];
       const newLetters = [...collectedLetters, nextLetter || "?"];
       setCollectedLetters(newLetters);
-      
+
       localStorage.setItem("collectedLetters", JSON.stringify(newLetters));
 
-      if (newCompleted.length >= round1Tasks.length) {
+      if (newCompleted.length >= tasks.length) {
         setPhase("round1Complete");
         setActiveTaskId("");
       } else {
-        const nextTask = round1Tasks.find(t => !newCompleted.includes(t.id) && !failedTasks.includes(t.id));
+        const nextTask = tasks.find(t => !newCompleted.includes(t.id) && !failedTasks.includes(t.id));
         if (nextTask) {
           setPendingTaskId(nextTask.id);
           setTaskDialogIndex(0);
@@ -133,7 +160,7 @@ export default function Round1Page() {
     }
 
     return isCorrect;
-  }, [activeTaskId, completedTasks, failedTasks, collectedLetters]);
+  }, [tasks, activeTaskId, completedTasks, failedTasks, collectedLetters]);
 
   if (!loaded) {
     return (
@@ -183,7 +210,7 @@ export default function Round1Page() {
             if (prologueIndex < prologue.length - 1) {
               setPrologueIndex(prologueIndex + 1);
             } else {
-              setPendingTaskId(round1Tasks[0].id);
+              setPendingTaskId(tasks[0]?.id ?? "");
               setTaskDialogIndex(0);
               setPhase("taskDialogue");
             }
@@ -194,8 +221,8 @@ export default function Round1Page() {
   }
 
   if (phase === "round1") {
-    const nodes = generateNodes(round1Tasks, completedTasks, failedTasks, activeTaskId);
-    const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
+    const nodes = generateNodes(tasks, completedTasks, failedTasks, activeTaskId);
+    const progress = Math.round((completedTasks.length / tasks.length) * 100);
     return (
       <TaskBackground>
         <TopHUD progress={progress} letters={collectedLetters} title="ROUND 1 • NEXUS" />
@@ -221,12 +248,12 @@ export default function Round1Page() {
         </div>
         <PuzzleModal
           open={modalOpen}
-          title={activeTaskId ? getTask(activeTaskId)?.title ?? "" : ""}
-          description={activeTaskId ? getTask(activeTaskId)?.description ?? "" : ""}
-          hint={activeTaskId ? getTask(activeTaskId)?.hint : ""}
+          title={tasks.find(t => t.id === activeTaskId)?.title ?? ""}
+          description={tasks.find(t => t.id === activeTaskId)?.description ?? ""}
+          hint={tasks.find(t => t.id === activeTaskId)?.hint}
           onClose={() => setModalOpen(false)}
           onSubmit={handleTaskSubmit}
-          timeLimit={activeTaskId ? getTask(activeTaskId)?.timeLimit : undefined}
+          timeLimit={tasks.find(t => t.id === activeTaskId)?.timeLimit}
           isCompleted={activeTaskId ? completedTasks.includes(activeTaskId) : false}
           isFailed={activeTaskId ? failedTasks.includes(activeTaskId) : false}
         />
@@ -246,7 +273,7 @@ export default function Round1Page() {
 
     const currentLine = dialogLines[taskDialogIndex];
     const character = getCharacter(currentLine.character);
-    const progress = Math.round((completedTasks.length / round1Tasks.length) * 100);
+    const progress = Math.round((completedTasks.length / tasks.length) * 100);
     return (
       <TaskBackground>
         <TopHUD progress={progress} letters={collectedLetters} title="NEW TASK" />

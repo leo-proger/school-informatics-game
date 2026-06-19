@@ -40,6 +40,8 @@ interface Task {
   tour: 1 | 2;
   task_type: "regular" | "boss";
   min_team_size: number;
+  short_title: string | null;
+  options: string | null;
 }
 
 type Tab = "teams" | "tasks" | "settings";
@@ -360,6 +362,7 @@ function TeamsTab() {
 const EMPTY_TASK: Task = {
   id: "", title: "", description: "", answer: "", hint: "",
   difficulty: "medium", time_limit: 300, task_number: 1, tour: 1, task_type: "regular", min_team_size: 1,
+  short_title: null, options: null,
 };
 
 function TasksTab() {
@@ -392,6 +395,8 @@ function TasksTab() {
         hint: editing.hint, difficulty: editing.difficulty, time_limit: editing.time_limit,
         task_number: editing.task_number, tour: editing.tour, task_type: editing.task_type,
         min_team_size: editing.min_team_size,
+        short_title: editing.short_title || null,
+        options: editing.options || null,
       }).eq("id", editing.id);
     }
     setSaving(false);
@@ -469,9 +474,20 @@ function TasksTab() {
                 <Input label="Лимит времени (сек)" type="number" value={editing.time_limit} onChange={v => setEditing({ ...editing, time_limit: Number(v) })} />
                 <Input label="Мин. участников" type="number" value={editing.min_team_size} onChange={v => setEditing({ ...editing, min_team_size: Number(v) })} />
               </div>
+              {editing.tour === 2 && (
+                <Input label="Короткое название (для карты)" value={editing.short_title ?? ""} onChange={v => setEditing({ ...editing, short_title: v || null })} />
+              )}
               <Input label="Название" value={editing.title} onChange={v => setEditing({ ...editing, title: v })} />
               <Input label="Описание" value={editing.description} onChange={v => setEditing({ ...editing, description: v })} rows={4} />
-              <Input label="Ответ" value={editing.answer} onChange={v => setEditing({ ...editing, answer: v })} />
+              <Input label="Правильный ответ" value={editing.answer} onChange={v => setEditing({ ...editing, answer: v })} />
+              {editing.tour === 2 && (
+                <Input
+                  label='Варианты ответов (JSON-массив, пример: ["Да","Нет","Может","Нет"])'
+                  value={editing.options ?? ""}
+                  onChange={v => setEditing({ ...editing, options: v || null })}
+                  rows={3}
+                />
+              )}
               <Input label="Подсказка" value={editing.hint} onChange={v => setEditing({ ...editing, hint: v })} rows={2} />
               <div className="grid grid-cols-3 gap-4">
                 <Select label="Тур" value={String(editing.tour)} onChange={v => setEditing({ ...editing, tour: Number(v) as 1 | 2 })}
