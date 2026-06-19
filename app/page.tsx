@@ -22,7 +22,7 @@ export default function HomePage() {
           {/* Badge */}
           <div className="mb-3 px-4 py-1.5 rounded-full border border-cyan-500/40 text-xs tracking-widest text-cyan-300 uppercase font-mono"
             style={{ background: 'rgba(34, 211, 238, 0.06)' }}>
-            ◈ NEXUS HACKATHON 2026 · 06.06 — 20.06 ◈
+            ◈ NEXUS ОЛИМПИАДА 2026 · 06.06 — 20.06 ◈
           </div>
           <div className="text-center mt-4 mb-6">
             <p className="text-xs tracking-[0.4em] text-cyan-400 uppercase mb-3 font-mono">/ПРОТОКОЛ/</p>
@@ -45,7 +45,7 @@ export default function HomePage() {
           xmlns="http://www.w3.org/2000/svg"
           className="w-full"
           style={{ display: 'block', maxHeight: '240px' }}
-          aria-label="NEXUS Hackathon — Протокол Феникс"
+          aria-label="NEXUS Олимпиада — Протокол Феникс"
         >
           <defs>
             <radialGradient id="cg" cx="50%" cy="50%" r="35%">
@@ -208,7 +208,7 @@ export default function HomePage() {
           {/* ── TEXT ── */}
           <text x="600" y="17" textAnchor="middle" fill="#22d3ee"
             fontSize="9" fontFamily="monospace" letterSpacing="7" opacity="0.65">
-            NEXUS HACKATHON
+            NEXUS ОЛИМПИАДА
           </text>
           <text x="600" y="198" textAnchor="middle" fill="#94a3b8"
             fontSize="8.5" fontFamily="monospace" letterSpacing="5" opacity="0.55">
@@ -281,7 +281,7 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col flex-1 p-5 gap-4">
                 <div>
-                  <p className="text-xs font-mono text-cyan-400 tracking-widest uppercase mb-2">Туры хакатона</p>
+                  <p className="text-xs font-mono text-cyan-400 tracking-widest uppercase mb-2">Туры олимпиады</p>
                   <p className="text-sm text-slate-300 leading-relaxed">
                     Два тура испытаний: шифры, логика и двоичный код. Каждый тур — новый уровень сложности на пути к уничтожению VOID.
                   </p>
@@ -402,9 +402,9 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-mono">
-                Международный хакатон по информатике и кибербезопасности для школьников.
+                Международная олимпиада по информатике и кибербезопасности для школьников.
               </p>
-              <p className="text-xs text-slate-600 mt-3 font-mono">© 2026 NEXUS Hackathon</p>
+              <p className="text-xs text-slate-600 mt-3 font-mono">© 2026 NEXUS Олимпиада</p>
             </div>
 
             <div>

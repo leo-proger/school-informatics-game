@@ -59,17 +59,18 @@ export default function TasksPage() {
     }
   }, [team, isLoading, router]);
 
-  // Синхронизируем состояние с БД при каждом открытии страницы
+  // Синхронизируем состояние с БД, затем читаем localStorage.
+  // refreshTeam → syncProgressFromRow очищает localStorage, если прогресс в БД сброшен,
+  // поэтому метки сохранений читаем уже ПОСЛЕ синхронизации (иначе показывали бы устаревшее).
   useEffect(() => {
-    void refreshTeam();
+    let active = true;
+    refreshTeam().then(() => {
+      if (!active) return;
+      setSaveLabel(getSaveLabel(localStorage.getItem(ROUND1_SAVE_KEY)));
+      setRound2HasSave(hasRound2Save());
+    });
+    return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const raw = localStorage.getItem(ROUND1_SAVE_KEY);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSaveLabel(getSaveLabel(raw));
-    setRound2HasSave(hasRound2Save());
   }, []);
 
   // Источник истины — БД (team.tour1Completed), а не localStorage
@@ -174,7 +175,7 @@ export default function TasksPage() {
                       ДОСТУПЕН
                     </div>
                   )}
-                  {round2HasSave && (
+                  {round2HasSave && !round2Completed && (
                     <div className="mt-2 text-xs font-mono text-yellow-400/70">
                       ⚡ Есть сохранение
                     </div>

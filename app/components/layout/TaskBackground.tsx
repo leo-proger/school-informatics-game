@@ -42,11 +42,11 @@ export default function TaskBackground({ children }: TaskBackgroundProps) {
             width={300}
             height={400}
             className="w-full h-full object-contain"
-            loading="lazy"
+            priority
           />
         </div>
-        
-        {/* Логотип Phoenix — правый край */}
+
+        {/* Логотип Phoenix — правый край (тот же src — берётся из кеша) */}
         <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none w-[300px] h-[400px] scale-x-[-1]">
           <Image
             src="/images/phoenix-logo.png"
@@ -54,7 +54,7 @@ export default function TaskBackground({ children }: TaskBackgroundProps) {
             width={300}
             height={400}
             className="w-full h-full object-contain"
-            loading="lazy"
+            loading="eager"
           />
         </div>
       </div>

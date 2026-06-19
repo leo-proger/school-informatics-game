@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-context";
 import { supabase } from "@/app/lib/supabase";
 import Background from "@/app/components/layout/Background";
+import RowActionsMenu from "@/app/components/ui/RowActionsMenu";
 import { Setting, groupSettings, isBooleanKey } from "@/app/lib/settings-utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -132,7 +133,6 @@ function TeamsTab() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("score");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const handleSort = (col: SortKey) => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -147,13 +147,16 @@ function TeamsTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data: teamRows } = await supabase.from("teams").select("*").order("score", { ascending: false });
-    const { data: participantRows } = await supabase.from("participants").select("*");
+    // Один запрос с join; не тянем тяжёлые round1_progress/round2_progress (JSON прогресса).
+    const { data: teamRows } = await supabase
+      .from("teams")
+      .select("id,name,password,is_admin,score,tour1_completed,tour2_completed,registered_at,participants(*)")
+      .order("score", { ascending: false });
     const teamsWithPart = (teamRows ?? []).map(t => ({
       ...t,
-      participants: (participantRows ?? []).filter(p => p.team_id === t.id),
+      participants: (t.participants as Participant[]) ?? [],
     }));
-    setTeams(teamsWithPart);
+    setTeams(teamsWithPart as Team[]);
     setLoading(false);
   }, []);
 
@@ -165,45 +168,45 @@ function TeamsTab() {
     setSaving(true);
 
     const original = teams.find(t => t.id === editing.id);
-    let finalScore = Number(editing.score) || 0;
     const POINTS: Record<string, number> = { easy: 100, medium: 200, hard: 300, boss: 500 };
-    const extraUpdate: Record<string, unknown> = {};
-    let forceTour2False = false;
 
-    // Тур 1 только что отмечен как пройденный — начисляем очки за все задания
-    if (editing.tour1_completed && !original?.tour1_completed) {
-      const { data: t1tasks } = await supabase.from("tasks").select("difficulty").eq("tour", 1);
-      const tour1Points = (t1tasks ?? []).reduce((sum, t) => sum + (POINTS[t.difficulty] ?? 100), 0);
-      finalScore += tour1Points;
-    }
+    // Тур 2 не может быть пройден без тура 1
+    const tour1 = editing.tour1_completed;
+    const tour2 = editing.tour2_completed && tour1;
+    const completedTours = tour2 ? 2 : tour1 ? 1 : 0;
 
-    // Тур 1 снят — сбрасываем прогресс обоих туров
-    if (!editing.tour1_completed && original?.tour1_completed) {
-      extraUpdate.round1_progress = null;
-      extraUpdate.round2_progress = null;
-      forceTour2False = true;
-    }
-
-    // Тур 2 только что отмечен как пройденный — начисляем 500 за каждое задание тура 2
-    if (editing.tour2_completed && !original?.tour2_completed && !forceTour2False) {
-      const { data: t2tasks } = await supabase.from("tasks").select("id").eq("tour", 2);
-      finalScore += (t2tasks ?? []).length * 500;
-    }
-
-    // Тур 2 снят — сбрасываем прогресс тура 2
-    if (!editing.tour2_completed && original?.tour2_completed) {
-      extraUpdate.round2_progress = null;
-    }
-
-    await supabase.from("teams").update({
+    const update: Record<string, unknown> = {
       name: editing.name,
       password: editing.password,
-      score: finalScore,
       is_admin: editing.is_admin,
-      tour1_completed: editing.tour1_completed,
-      tour2_completed: forceTour2False ? false : editing.tour2_completed,
-      ...extraUpdate,
-    }).eq("id", editing.id);
+      tour1_completed: tour1,
+      tour2_completed: tour2,
+    };
+
+    if (completedTours === 0) {
+      // Полный сброс прогресса (как кнопка «Сбросить → до тура 1»)
+      update.score = 0;
+      update.round1_progress = null;
+      update.round2_progress = null;
+    } else {
+      let finalScore = Number(editing.score) || 0;
+
+      // Начисляем очки за впервые отмеченные туры
+      if (tour1 && !original?.tour1_completed) {
+        const { data: t1tasks } = await supabase.from("tasks").select("difficulty").eq("tour", 1);
+        finalScore += (t1tasks ?? []).reduce((sum, t) => sum + (POINTS[t.difficulty] ?? 100), 0);
+      }
+      if (tour2 && !original?.tour2_completed) {
+        const { data: t2tasks } = await supabase.from("tasks").select("id").eq("tour", 2);
+        finalScore += (t2tasks ?? []).length * 500;
+      }
+      update.score = finalScore;
+
+      // Тур 2 снят — сбрасываем сохранение тура 2
+      if (!tour2 && original?.tour2_completed) update.round2_progress = null;
+    }
+
+    await supabase.from("teams").update(update).eq("id", editing.id);
     setSaving(false);
     setEditing(null);
     load();
@@ -280,7 +283,7 @@ function TeamsTab() {
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" /></div>;
 
   return (
-    <div onClick={() => setOpenMenu(null)}>
+    <div>
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
@@ -355,37 +358,13 @@ function TeamsTab() {
                   <td className="px-4 py-3 text-muted text-xs font-mono whitespace-nowrap">{team.registered_at ? new Date(team.registered_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
-                      {/* Dropdown menu */}
-                      <div className="relative">
-                        <button
-                          onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === team.id ? null : team.id); }}
-                          className="w-7 h-7 flex items-center justify-center rounded text-muted hover:text-slate-100 hover:bg-white/10 transition-colors text-lg leading-none"
-                        >
-                          ⋮
-                        </button>
-                        {openMenu === team.id && (
-                          <div className="absolute right-0 top-full mt-1 w-40 bg-slate-900 border border-cyan-500/30 rounded-lg shadow-xl z-20 overflow-hidden">
-                            <button
-                              onClick={e => { e.stopPropagation(); setEditing({ ...team }); setOpenMenu(null); }}
-                              className="w-full px-4 py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/15 transition-colors"
-                            >
-                              ✏️ Редактировать
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); setConfirmReset({ id: team.id, name: team.name }); setOpenMenu(null); }}
-                              className="w-full px-4 py-2.5 text-left text-sm text-yellow-400 hover:bg-yellow-500/15 transition-colors"
-                            >
-                              ↩ Сбросить прогресс
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); setConfirmDelete({ type: "team", id: team.id, name: team.name }); setOpenMenu(null); }}
-                              className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/15 transition-colors"
-                            >
-                              🗑 Удалить
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <RowActionsMenu
+                        actions={[
+                          { label: "✏️ Редактировать", onClick: () => setEditing({ ...team }) },
+                          { label: "↩ Сбросить прогресс", onClick: () => setConfirmReset({ id: team.id, name: team.name }), className: "text-yellow-400 hover:bg-yellow-500/15" },
+                          { label: "🗑 Удалить", onClick: () => setConfirmDelete({ type: "team", id: team.id, name: team.name }), className: "text-red-400 hover:bg-red-500/15" },
+                        ]}
+                      />
                       {/* Chevron expand */}
                       <svg
                         onClick={e => { e.stopPropagation(); setExpanded(expanded === team.id ? null : team.id); }}
@@ -444,27 +423,52 @@ function TeamsTab() {
               <Input label="Название" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} />
               <Input label="Пароль" value={editing.password} onChange={v => setEditing({ ...editing, password: v })} />
               <Input label="Счёт" type="number" value={editing.score} onChange={v => setEditing({ ...editing, score: Number(v) })} />
-              <div className="flex gap-6">
-                {
-                  ([
-                  { key: "tour1_completed" as const, label: "Тур 1 завершён" },
-                  { key: "tour2_completed" as const, label: "Тур 2 завершён" },
-                  { key: "is_admin" as const, label: "Администратор" },
-                ] as const).map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editing[key]}
-                      onChange={e => {
-                        const checked = e.target.checked;
-                        setEditing(prev => prev ? { ...prev, [key]: checked } : prev);
-                      }}
-                      className="w-4 h-4 accent-cyan-400"
-                    />
-                    <span className="text-sm text-slate-300">{label}</span>
-                  </label>
-                ))}
+
+              {/* Прогресс по турам — единый переключатель */}
+              <div>
+                <label className="block text-xs text-muted mb-2">Прогресс</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { v: 0, label: "Ничего", hint: "Сброс в ноль" },
+                    { v: 1, label: "Тур 1", hint: "Только первый" },
+                    { v: 2, label: "Тур 1 + 2", hint: "Оба тура" },
+                  ] as const).map(opt => {
+                    const completedTours = editing.tour2_completed && editing.tour1_completed ? 2 : editing.tour1_completed ? 1 : 0;
+                    const active = completedTours === opt.v;
+                    return (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setEditing(prev => prev ? { ...prev, tour1_completed: opt.v >= 1, tour2_completed: opt.v >= 2 } : prev)}
+                        className={`px-3 py-2.5 rounded border text-center transition-colors ${
+                          active
+                            ? "bg-cyan-500/20 border-cyan-400/60 text-cyan-200"
+                            : "border-white/10 text-muted hover:text-slate-200 hover:border-cyan-500/30"
+                        }`}
+                      >
+                        <div className="text-sm font-medium">{opt.label}</div>
+                        <div className="text-[10px] opacity-70 mt-0.5">{opt.hint}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!editing.tour1_completed && (
+                  <p className="text-[11px] text-yellow-400/80 mt-2">⚠ Счёт обнулится, сохранения обоих туров будут сброшены.</p>
+                )}
               </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editing.is_admin}
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setEditing(prev => prev ? { ...prev, is_admin: checked } : prev);
+                  }}
+                  className="w-4 h-4 accent-cyan-400"
+                />
+                <span className="text-sm text-slate-300">Администратор</span>
+              </label>
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={saveTeam} disabled={saving} className="px-5 py-2 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-sm hover:bg-cyan-500/30 transition-colors disabled:opacity-50">
@@ -582,7 +586,6 @@ function TasksTab() {
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -642,7 +645,7 @@ function TasksTab() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-cyan-500/30 overflow-hidden card-glow" onClick={() => setOpenMenu(null)}>
+      <div className="rounded-xl border border-cyan-500/30 overflow-hidden card-glow">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-cyan-500/25 bg-white/[0.07]">
@@ -665,30 +668,12 @@ function TasksTab() {
                 <td className="px-4 py-3 text-muted">{task.min_team_size}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end" onClick={e => e.stopPropagation()}>
-                    <div className="relative">
-                      <button
-                        onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === task.id ? null : task.id); }}
-                        className="w-7 h-7 flex items-center justify-center rounded text-muted hover:text-slate-100 hover:bg-white/10 transition-colors text-lg leading-none"
-                      >
-                        ⋮
-                      </button>
-                      {openMenu === task.id && (
-                        <div className="absolute right-0 top-full mt-1 w-44 bg-slate-900 border border-cyan-500/30 rounded-lg shadow-xl z-20 overflow-hidden">
-                          <button
-                            onClick={e => { e.stopPropagation(); setEditing({ ...task }); setIsNew(false); setOpenMenu(null); }}
-                            className="w-full px-4 py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/15 transition-colors"
-                          >
-                            ✏️ Редактировать
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); setConfirmDelete({ id: task.id, title: task.title }); setOpenMenu(null); }}
-                            className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/15 transition-colors"
-                          >
-                            🗑 Удалить
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <RowActionsMenu
+                      actions={[
+                        { label: "✏️ Редактировать", onClick: () => { setEditing({ ...task }); setIsNew(false); } },
+                        { label: "🗑 Удалить", onClick: () => setConfirmDelete({ id: task.id, title: task.title }), className: "text-red-400 hover:bg-red-500/15" },
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>

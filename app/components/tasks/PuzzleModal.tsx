@@ -64,7 +64,6 @@ export default function PuzzleModal({
       setHasAttempted(false);
       setShowHint(false);
     } else if (timeLimit) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTimeLeft(timeLimit);
     }
   }, [open, timeLimit]);
@@ -160,26 +159,28 @@ export default function PuzzleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="relative w-[95%] max-w-[1400px] animate-pulse-glow">
+      <div className="relative w-full max-w-3xl animate-pulse-glow">
         <div className="scanline" />
 
-        <GlassPanel className={`p-6 border ${getBorderColor()}`}>
+        <GlassPanel className={`flex flex-col max-h-[88vh] border ${getBorderColor()}`}>
           {/* HEADER */}
-          <div className="flex justify-between items-center mb-4">
-            <h2 className={`font-mono tracking-widest ${getTitleColor()}`}>
+          <div className="flex justify-between items-center gap-3 px-6 pt-6 pb-4 shrink-0">
+            <h2 className={`font-mono tracking-widest text-sm sm:text-base truncate ${getTitleColor()}`}>
               {getTitleIcon()} {title}
             </h2>
 
             {timeLimit && !isReadOnly && (
-              <div className={`font-mono ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-red-400'}`}>
+              <div className={`font-mono shrink-0 ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-red-400'}`}>
                 {timeLeft}s
               </div>
             )}
           </div>
 
+          {/* BODY — единственная область прокрутки */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6">
           {/* DESCRIPTION */}
           {description && (
-            <div className="mb-4 max-h-[380px] overflow-y-auto rounded border border-white/5 bg-black/20 p-4">
+            <div className="mb-4 rounded border border-white/5 bg-black/20 p-4">
               <TaskDescription text={description} />
             </div>
           )}
@@ -197,7 +198,7 @@ export default function PuzzleModal({
 
           {/* === ВАРИАНТЫ ОТВЕТОВ (в две колонки) === */}
           {hasOptions ? (
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               {options.map((option, idx) => {
                 const isSelected = selectedOption === option;
                 const isCorrect = showResult === "correct" && option === correctAnswer;
@@ -307,11 +308,12 @@ export default function PuzzleModal({
               </div>
             </div>
           )}
+          </div>
 
-          {/* ACTIONS */}
-          <div className="flex justify-end gap-3">
-            <NeonButton 
-              color={isFailed ? "red" : isCompleted ? "cyan" : "cyan"} 
+          {/* ACTIONS — фиксированный футер */}
+          <div className="flex justify-end gap-3 px-6 pt-4 pb-6 border-t border-white/10 shrink-0">
+            <NeonButton
+              color={isFailed ? "red" : isCompleted ? "cyan" : "cyan"}
               onClick={onClose}
             >
               Закрыть

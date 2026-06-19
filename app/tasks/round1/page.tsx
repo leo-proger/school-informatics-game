@@ -14,7 +14,7 @@ import { useAuth } from "@/app/lib/auth-context";
 import { DIFFICULTY_POINTS, generateNodes } from "@/app/lib/game-utils";
 import { GameTask } from "@/app/lib/types";
 import { addScore } from "@/app/lib/game-actions";
-import { useVideoPreload, useAutoSaveProgress } from "@/app/lib/game-hooks";
+import { useAutoSaveProgress } from "@/app/lib/game-hooks";
 import { supabase } from "@/app/lib/supabase";
 import VideoPlayer from "@/app/components/ui/VideoPlayer";
 import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
@@ -48,9 +48,6 @@ export default function Round1Page() {
       router.replace("/tasks");
     }
   }, [isLoading, team, router]);
-
-  // Предзагрузка видео сразу при монтировании
-  useVideoPreload(["/videos/promo.mp4", "/videos/2.mp4"]);
 
   // Загрузка заданий из Supabase + восстановление сохранения.
   // Ждём окончания авторизации: AuthProvider синхронизирует localStorage с БД
@@ -165,7 +162,7 @@ export default function Round1Page() {
   // ==================== РЕНДЕР ====================
 
   if (phase === "video") {
-    return <VideoPlayer src="/videos/promo.mp4" onEnded={() => setPhase("prologue")} onSkip={() => setPhase("prologue")} />;
+    return <VideoPlayer key="promo" src="/videos/promo.mp4" onEnded={() => setPhase("prologue")} onSkip={() => setPhase("prologue")} />;
   }
 
   if (phase === "prologue") {
@@ -376,7 +373,7 @@ export default function Round1Page() {
 
   // ============ ПРОМО-РОЛИК ПОСЛЕ 1 ТУРА ============
   if (phase === "round1Outro") {
-    return <VideoPlayer src="/videos/2.mp4" onEnded={() => router.push("/tasks")} onSkip={() => router.push("/tasks")} />;
+    return <VideoPlayer key="round1-outro" src="/videos/2.mp4" onEnded={() => router.push("/tasks")} onSkip={() => router.push("/tasks")} />;
   }
 
   return null;

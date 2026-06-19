@@ -135,7 +135,7 @@ export default function LeaderboardPage() {
           <p className="text-xs font-mono tracking-[0.4em] text-cyan-400 uppercase mb-2">/NEXUS БАЗА ДАННЫХ/</p>
           <h1 className="text-4xl font-black neon-text mb-2">РЕЙТИНГ КОМАНД</h1>
           <p className="text-sm text-slate-400 font-mono">
-            {loading ? 'Загрузка...' : `${visibleTeams.length} команд · Актуальные результаты хакатона`}
+            {loading ? 'Загрузка...' : `${visibleTeams.length} команд · Актуальные результаты олимпиады`}
           </p>
         </div>
 
