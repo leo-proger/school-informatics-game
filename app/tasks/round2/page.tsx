@@ -358,7 +358,7 @@ export default function Round2Page() {
     const character = getCharacter(line.character);
     return (
       <TaskBackground>
-        <TopHUD progress={50} letters={collectedLetters} title="ROUND 2 • VOID" />
+        <TopHUD progress={50} letters={[]} title="ROUND 2 • VOID" />
         <DialogueBox
           speaker={character.name}
           avatar={character.avatarPlaceholder}
@@ -383,7 +383,7 @@ export default function Round2Page() {
     const character = getCharacter("void");
     return (
       <TaskBackground>
-        <TopHUD progress={75} letters={collectedLetters} title="VOID DETECTED" />
+        <TopHUD progress={75} letters={[]} title="VOID DETECTED" />
         {/* Голограмма — ПОВЕРХ ДИАЛОГА (z-50) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 overflow-hidden">
           <div className="relative w-[500px] h-[500px]">
@@ -444,7 +444,7 @@ export default function Round2Page() {
 
     return (
       <TaskBackground>
-        <TopHUD progress={progress} letters={collectedLetters} title="VOID NETWORK" />
+        <TopHUD progress={progress} letters={[]} title="VOID NETWORK" />
 
         <div className="relative z-10 w-full h-[calc(100vh-120px)]">
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -576,7 +576,7 @@ export default function Round2Page() {
     const character = getCharacter(line.character);
     return (
       <TaskBackground>
-        <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
+        <TopHUD progress={100} letters={[]} title="VICTORY" />
         <DialogueBox
           speaker={character.name}
           avatar={character.avatarPlaceholder}
