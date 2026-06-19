@@ -54,6 +54,21 @@ export default function Round1Page() {
   const [r1cIdx, setR1cIdx] = useState(0);
   const [accessCode, setAccessCode] = useState("");
 
+  // Предзагрузка видео сразу при монтировании
+  useEffect(() => {
+    const srcs = ["/videos/promo.mp4", "/videos/2.mp4"];
+    const elements = srcs.map((src) => {
+      const v = document.createElement("video");
+      v.src = src;
+      v.preload = "auto";
+      v.muted = true;
+      v.style.cssText = "position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0;pointer-events:none";
+      document.body.appendChild(v);
+      return v;
+    });
+    return () => elements.forEach((v) => document.body.removeChild(v));
+  }, []);
+
   // Загрузка заданий из Supabase + восстановление сохранения
   useEffect(() => {
     supabase
@@ -186,7 +201,7 @@ export default function Round1Page() {
         </video>
         <button
           onClick={() => setPhase("prologue")}
-          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+          className="fixed bottom-10 right-10 z-50 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
         >
           Пропустить ↓
         </button>
@@ -405,7 +420,7 @@ export default function Round1Page() {
         </video>
         <button
           onClick={() => router.push("/tasks")}
-          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+          className="fixed bottom-10 right-10 z-50 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
         >
           Пропустить ↓
         </button>

@@ -166,7 +166,7 @@ export default function PuzzleModal({
           {description && (
             <div className="mb-4 max-h-[380px] overflow-y-auto rounded border border-white/5 bg-black/20">
               <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre overflow-x-auto p-4">
-                {description}
+                {description?.replace(/\\n/g, "\n")}
               </pre>
             </div>
           )}
