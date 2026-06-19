@@ -162,10 +162,12 @@ export default function PuzzleModal({
             )}
           </div>
 
-          {/* DESCRIPTION — ШИРОКИЙ, ВСЁ ПОМЕЩАЕТСЯ */}
+          {/* DESCRIPTION */}
           {description && (
-            <div className="text-gray-300 font-mono mb-4 opacity-80 whitespace-pre-wrap text-sm leading-relaxed max-h-[400px] overflow-y-auto">
-              {description}
+            <div className="mb-4 max-h-[380px] overflow-y-auto rounded border border-white/5 bg-black/20">
+              <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre overflow-x-auto p-4">
+                {description}
+              </pre>
             </div>
           )}
 

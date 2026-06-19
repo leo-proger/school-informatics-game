@@ -123,6 +123,7 @@ function TeamsTab() {
   const [editParticipant, setEditParticipant] = useState<Participant | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: "team" | "participant"; id: string; name: string } | null>(null);
+  const [confirmReset, setConfirmReset] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
@@ -173,6 +174,16 @@ function TeamsTab() {
     await supabase.from("participants").delete().eq("team_id", id);
     await supabase.from("teams").delete().eq("id", id);
     setConfirmDelete(null);
+    load();
+  };
+
+  const resetTeam = async (id: string, to: "tour1" | "tour2") => {
+    if (to === "tour1") {
+      await supabase.from("teams").update({ score: 0, tour1_completed: false, tour2_completed: false }).eq("id", id);
+    } else {
+      await supabase.from("teams").update({ tour2_completed: false }).eq("id", id);
+    }
+    setConfirmReset(null);
     load();
   };
 
@@ -245,6 +256,7 @@ function TeamsTab() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <button onClick={() => setEditing({ ...team })} className="px-3 py-1 rounded text-xs border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">Ред.</button>
+                      <button onClick={() => setConfirmReset({ id: team.id, name: team.name })} className="px-3 py-1 rounded text-xs border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors">Сбр.</button>
                       <button onClick={() => setConfirmDelete({ type: "team", id: team.id, name: team.name })} className="px-3 py-1 rounded text-xs border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">Уд.</button>
                       <svg
                         className={`w-4 h-4 text-slate-400 ml-1 transition-transform duration-200 ${expanded === team.id ? "rotate-180" : ""}`}
@@ -346,6 +358,43 @@ function TeamsTab() {
           onConfirm={() => confirmDelete.type === "team" ? deleteTeam(confirmDelete.id) : deleteParticipant(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
         />
+      )}
+
+      {/* Reset Progress Dialog */}
+      {confirmReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#0a0a1a] border border-yellow-500/30 rounded-xl p-8 max-w-sm w-full mx-4 text-center">
+            <div className="w-12 h-12 rounded-full border border-yellow-500/40 bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <p className="text-slate-200 text-sm mb-2">Сбросить прогресс команды</p>
+            <p className="text-yellow-400 font-semibold mb-6">«{confirmReset.name}»</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => resetTeam(confirmReset.id, "tour1")}
+                className="px-5 py-3 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-sm hover:bg-red-500/30 transition-colors text-left"
+              >
+                <div className="font-semibold">↩ До тура 1</div>
+                <div className="text-xs text-red-400/70 mt-0.5">Очки → 0, оба тура не пройдены</div>
+              </button>
+              <button
+                onClick={() => resetTeam(confirmReset.id, "tour2")}
+                className="px-5 py-3 rounded bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-sm hover:bg-yellow-500/30 transition-colors text-left"
+              >
+                <div className="font-semibold">↩ До тура 2</div>
+                <div className="text-xs text-yellow-400/70 mt-0.5">Тур 1 сохранён, тур 2 сброшен</div>
+              </button>
+              <button
+                onClick={() => setConfirmReset(null)}
+                className="px-5 py-2 rounded bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-colors"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
