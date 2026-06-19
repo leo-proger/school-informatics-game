@@ -4,9 +4,9 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Project: NEXUS Hackathon — Протокол ФЕНИКС
+# Project: NEXUS Олимпиада — Протокол ФЕНИКС
 
-Платформа хакатона (6–20 июня 2026). Киберпанк RPG-интерфейс с Supabase-бэкендом.
+Платформа олимпиады (6–20 июня 2026). Киберпанк RPG-интерфейс с Supabase-бэкендом.
 
 ## Git-workflow
 - Каждый разработчик работает **в своей ветке** (например `egor`, `dev`)

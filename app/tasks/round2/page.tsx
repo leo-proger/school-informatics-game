@@ -14,7 +14,7 @@ import { Round2Task } from "@/app/data/tasks-round2";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/lib/auth-context";
 import { SESSION_KEY, addScore } from "@/app/lib/game-actions";
-import { useVideoPreload, useAutoSaveProgress } from "@/app/lib/game-hooks";
+import { useAutoSaveProgress } from "@/app/lib/game-hooks";
 import VideoPlayer from "@/app/components/ui/VideoPlayer";
 import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
 
@@ -100,9 +100,6 @@ export default function Round2Page() {
       router.replace("/tasks");
     }
   }, [isLoading, team, router]);
-
-  // Предзагрузка видео сразу при монтировании
-  useVideoPreload(["/videos/3.mp4", "/videos/4.mp4"]);
 
   // Загрузка заданий + восстановление сохранения.
   // Ждём окончания авторизации: AuthProvider синхронизирует localStorage с БД.
@@ -257,7 +254,7 @@ export default function Round2Page() {
 
   // ============ ИНТРО-РОЛИК (3.mp4) ============
   if (phase === "intro") {
-    return <VideoPlayer src="/videos/3.mp4" onEnded={() => setPhase("dialogue")} onSkip={() => setPhase("dialogue")} />;
+    return <VideoPlayer key="round2-intro" src="/videos/3.mp4" onEnded={() => setPhase("dialogue")} onSkip={() => setPhase("dialogue")} />;
   }
 
   // === ДИАЛОГИ ===
@@ -419,7 +416,7 @@ export default function Round2Page() {
   // ============ АУТРО-РОЛИК (4.mp4) ============
   if (phase === "outro") {
     const handleOutroEnd = () => { localStorage.removeItem(SAVE_KEY); router.push("/tasks"); };
-    return <VideoPlayer src="/videos/4.mp4" onEnded={handleOutroEnd} onSkip={handleOutroEnd} />;
+    return <VideoPlayer key="round2-outro" src="/videos/4.mp4" onEnded={handleOutroEnd} onSkip={handleOutroEnd} />;
   }
 
   return null;

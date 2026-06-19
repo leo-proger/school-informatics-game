@@ -123,7 +123,7 @@ export default function LoginPage() {
           {showForgot && (
             <div className="mt-4 p-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 text-xs font-mono text-cyan-300">
               <p className="mb-1 text-cyan-400">{"// ВОССТАНОВЛЕНИЕ ДОСТУПА"}</p>
-              <p className="text-slate-200">Обратитесь к организаторам хакатона по email:</p>
+              <p className="text-slate-200">Обратитесь к организаторам олимпиады по email:</p>
               <p className="text-cyan-300 mt-1">phoenix.corps@nexus-2031.ru</p>
             </div>
           )}

@@ -72,7 +72,7 @@ export default function SchedulePage() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <p className="text-xs font-mono tracking-[0.4em] text-cyan-400 uppercase mb-3">/NEXUS HACKATHON 2026/</p>
+          <p className="text-xs font-mono tracking-[0.4em] text-cyan-400 uppercase mb-3">/NEXUS ОЛИМПИАДА 2026/</p>
           <h1 className="text-4xl font-black neon-text mb-2">РАСПИСАНИЕ</h1>
           <p className="text-sm text-slate-400 font-mono">06 июня — 20 июня 2026 года</p>
         </div>
