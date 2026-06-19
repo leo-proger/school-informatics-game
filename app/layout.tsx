@@ -7,11 +7,15 @@ import Navbar from "@/app/components/navbar";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -32,6 +36,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <head>
+        {/* Preconnect для внешних ресурсов */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preload критического фонового изображения диалогов */}
+        <link rel="preload" href="/images/ui/dialogue-frame.png" as="image" />
+      </head>
       <body className="min-h-screen" style={{ background: '#050816' }}>
         <AuthProvider>
           <Navbar />

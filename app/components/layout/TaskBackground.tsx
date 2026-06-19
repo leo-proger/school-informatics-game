@@ -42,7 +42,7 @@ export default function TaskBackground({ children }: TaskBackgroundProps) {
             width={300}
             height={400}
             className="w-full h-full object-contain"
-            loading="eager"
+            loading="lazy"
           />
         </div>
         
@@ -54,7 +54,7 @@ export default function TaskBackground({ children }: TaskBackgroundProps) {
             width={300}
             height={400}
             className="w-full h-full object-contain"
-            loading="eager"
+            loading="lazy"
           />
         </div>
       </div>
