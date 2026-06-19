@@ -35,7 +35,7 @@ export const SAVE_KEY = "phoenix_round1_progress";
 
 type Phase =
   | "video" | "prologue" | "round1" | "taskDialogue"
-  | "round1Complete" | "round1Code";
+  | "round1Complete" | "round1Code" | "round1Outro";
 
 
 export default function Round1Page() {
@@ -333,8 +333,7 @@ export default function Round1Page() {
                 if (e.key === "Enter") {
                   if (accessCode === expectedCode) {
                     localStorage.setItem("round1Completed", "true");
-                    setTour1Completed();
-                    router.push("/tasks");
+                    setPhase("round1Outro");
                   }
                 }
               }}
@@ -344,8 +343,7 @@ export default function Round1Page() {
               onClick={() => {
                 if (accessCode === expectedCode) {
                   localStorage.setItem("round1Completed", "true");
-                  setTour1Completed();
-                  router.push("/tasks");
+                  setPhase("round1Outro");
                 }
               }}
               className="text-xl px-8 py-4 w-full"
@@ -360,6 +358,31 @@ export default function Round1Page() {
           </GlassPanel>
         </div>
       </TaskBackground>
+    );
+  }
+
+  // ============ ПРОМО-РОЛИК ПОСЛЕ 1 ТУРА ============
+  if (phase === "round1Outro") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-black">
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          onEnded={() => {
+            router.push("/tasks");
+          }}
+        >
+          <source src="/videos/2.mp4" type="video/mp4" />
+          Ваш браузер не поддерживает видео.
+        </video>
+        <button
+          onClick={() => router.push("/tasks")}
+          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+        >
+          Пропустить ↓
+        </button>
+      </div>
     );
   }
 

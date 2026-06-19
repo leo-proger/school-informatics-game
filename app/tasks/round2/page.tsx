@@ -32,7 +32,7 @@ async function setTour2Completed() {
 
 export const SAVE_KEY = "phoenix_round2_progress";
 
-type Phase = "code" | "dialogue" | "boss" | "victory";
+type Phase = "intro" | "dialogue" | "boss" | "victory" | "outro";
 
 interface SavedData {
   phase?: string;
@@ -91,8 +91,8 @@ function generateCircles(): TaskCircle[] {
 export default function Round2Page() {
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
-  const [collectedLetters, setCollectedLetters] = useState<string[]>([]); // used in TopHUD via round1 letters
-  const [phase, setPhase] = useState<Phase>("dialogue");
+  const [collectedLetters, setCollectedLetters] = useState<string[]>([]);
+  const [phase, setPhase] = useState<Phase>("intro");
   const [dialogueIndex, setDialogueIndex] = useState(0);
   const [victoryIndex, setVictoryIndex] = useState(0);
   const [showVictoryOverlay, setShowVictoryOverlay] = useState(false);
@@ -117,8 +117,9 @@ export default function Round2Page() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
-        savedData = JSON.parse(raw) as SavedData;
-        setPhase((savedData.phase === "code" ? "dialogue" : savedData.phase ?? "dialogue") as Phase);
+        savedData = JSON.parse(raw);
+        const savedPhase = savedData.phase === "code" ? "dialogue" : savedData.phase ?? "intro";
+        setPhase(savedPhase);
         setDialogueIndex(savedData.dialogueIndex ?? 0);
         setVictoryIndex(savedData.victoryIndex ?? 0);
         setCompletedTasks(savedData.completedTasks ?? []);
@@ -302,9 +303,27 @@ export default function Round2Page() {
     );
   }
 
-  if (phase === "code") {
-    setPhase("dialogue");
-    return null;
+  // ============ ИНТРО-РОЛИК (3.mp4) ============
+  if (phase === "intro") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-black">
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          onEnded={() => setPhase("dialogue")}
+        >
+          <source src="/videos/3.mp4" type="video/mp4" />
+          Ваш браузер не поддерживает видео.
+        </video>
+        <button
+          onClick={() => setPhase("dialogue")}
+          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+        >
+          Пропустить ↓
+        </button>
+      </div>
+    );
   }
 
   // === ДИАЛОГИ ===
@@ -527,32 +546,8 @@ export default function Round2Page() {
   // === ПОБЕДА ===
   if (phase === "victory") {
     if (victoryIndex >= round2Complete.length) {
-      if (!showVictoryOverlay) setShowVictoryOverlay(true);
-      return (
-        <TaskBackground>
-          <TopHUD progress={100} letters={collectedLetters} title="VICTORY" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="text-center animate-in fade-in zoom-in duration-1000">
-              <div className="text-9xl mb-6">🏆</div>
-              <h1 className="text-7xl font-bold text-yellow-300 animate-pulse mb-4">ПОБЕДА!</h1>
-              <p className="text-2xl text-yellow-200/80">VOID уничтожен. NEXUS очищен.</p>
-              <p className="text-gray-400 mt-8 text-sm">
-                Ваш подвиг будет занесён в протокол Phoenix Corps
-              </p>
-              <NeonButton
-                color="cyan"
-                onClick={() => {
-                  localStorage.removeItem(SAVE_KEY);
-                  router.push("/tasks");
-                }}
-                className="mt-8"
-              >
-                ВЕРНУТЬСЯ В ПРОТОКОЛ
-              </NeonButton>
-            </div>
-          </div>
-        </TaskBackground>
-      );
+      setPhase("outro");
+      return null;
     }
 
     const line = round2Complete[victoryIndex];
@@ -569,6 +564,35 @@ export default function Round2Page() {
           onNext={() => setVictoryIndex(victoryIndex + 1)}
         />
       </TaskBackground>
+    );
+  }
+
+  // ============ АУТРО-РОЛИК (4.mp4) ============
+  if (phase === "outro") {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-black">
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          onEnded={() => {
+            localStorage.removeItem(SAVE_KEY);
+            router.push("/tasks");
+          }}
+        >
+          <source src="/videos/4.mp4" type="video/mp4" />
+          Ваш браузер не поддерживает видео.
+        </video>
+        <button
+          onClick={() => {
+            localStorage.removeItem(SAVE_KEY);
+            router.push("/tasks");
+          }}
+          className="absolute bottom-10 right-10 z-20 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition"
+        >
+          Пропустить ↓
+        </button>
+      </div>
     );
   }
 
