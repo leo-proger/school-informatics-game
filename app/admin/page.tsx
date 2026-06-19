@@ -124,7 +124,6 @@ function TeamsTab() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: "team" | "participant"; id: string; name: string } | null>(null);
   const [search, setSearch] = useState("");
-  const [hideAdmins, setHideAdmins] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -184,8 +183,7 @@ function TeamsTab() {
   };
 
   const filtered = teams.filter(t =>
-    t.name.toLowerCase().includes(search.toLowerCase()) &&
-    (!hideAdmins || !t.is_admin)
+    t.name.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-cyan-400/40 border-t-cyan-400 rounded-full animate-spin" /></div>;
@@ -206,7 +204,7 @@ function TeamsTab() {
         ))}
       </div>
 
-      {/* Search + filter */}
+      {/* Search */}
       <div className="flex gap-3 mb-4">
         <input
           placeholder="Поиск по названию..."
@@ -214,16 +212,6 @@ function TeamsTab() {
           onChange={e => setSearch(e.target.value)}
           className="flex-1 bg-black/60 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400/60 transition-colors"
         />
-        <button
-          onClick={() => setHideAdmins(v => !v)}
-          className={`px-4 py-2 rounded text-xs font-mono border transition-colors whitespace-nowrap ${
-            hideAdmins
-              ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
-              : 'bg-white/5 border-white/10 text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {hideAdmins ? '✓ Админы скрыты' : 'Скрыть админов'}
-        </button>
       </div>
 
       {/* Table */}
@@ -255,9 +243,15 @@ function TeamsTab() {
                   <td className="px-4 py-3">{team.tour2_completed ? <span className="text-green-400">✓</span> : <span className="text-slate-600">—</span>}</td>
                   <td className="px-4 py-3">{team.is_admin ? <span className="text-yellow-400">✓</span> : <span className="text-slate-600">—</span>}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <button onClick={() => setEditing({ ...team })} className="px-3 py-1 rounded text-xs border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">Ред.</button>
                       <button onClick={() => setConfirmDelete({ type: "team", id: team.id, name: team.name })} className="px-3 py-1 rounded text-xs border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">Уд.</button>
+                      <svg
+                        className={`w-4 h-4 text-slate-400 ml-1 transition-transform duration-200 ${expanded === team.id ? "rotate-180" : ""}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
                   </td>
                 </tr>
