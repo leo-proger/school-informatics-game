@@ -48,12 +48,10 @@ export default function PuzzleModal({
   const isReadOnly = isCompleted || isFailed || isLocked;
   const hasOptions = options && options.length > 0;
 
-  // ✅ Сбрасываем подсказку при смене задания (меняется title)
   useEffect(() => {
     setShowHint(false);
   }, [title]);
 
-  // ✅ Сбрасываем подсказку при закрытии
   useEffect(() => {
     if (!open) {
       setInput("");
@@ -144,8 +142,8 @@ export default function PuzzleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
-      <div className="relative w-[700px] animate-pulse-glow">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+      <div className="relative w-[95%] max-w-[1400px] animate-pulse-glow">
         <div className="scanline" />
 
         <GlassPanel className={`p-6 border ${getBorderColor()}`}>
@@ -162,11 +160,11 @@ export default function PuzzleModal({
             )}
           </div>
 
-          {/* DESCRIPTION */}
+          {/* DESCRIPTION — ШИРОКИЙ, ВСЁ ПОМЕЩАЕТСЯ */}
           {description && (
-            <p className="text-gray-300 font-mono mb-4 opacity-80 whitespace-pre-line">
+            <div className="text-gray-300 font-mono mb-4 opacity-80 whitespace-pre-wrap text-sm leading-relaxed max-h-[400px] overflow-y-auto">
               {description}
-            </p>
+            </div>
           )}
 
           {/* STATUS MESSAGE */}
@@ -180,9 +178,9 @@ export default function PuzzleModal({
             </div>
           )}
 
-          {/* === ВАРИАНТЫ ОТВЕТОВ (для второго тура) === */}
+          {/* === ВАРИАНТЫ ОТВЕТОВ (в две колонки) === */}
           {hasOptions ? (
-            <div className="space-y-3 mb-4">
+            <div className="grid grid-cols-2 gap-3 mb-4">
               {options.map((option, idx) => {
                 const isSelected = selectedOption === option;
                 const isCorrect = showResult === "correct" && option === correctAnswer;
@@ -194,7 +192,7 @@ export default function PuzzleModal({
                     onClick={() => onOptionSelect?.(option)}
                     disabled={!!showResult || isReadOnly}
                     className={`
-                      w-full p-4 rounded-lg border text-left transition-all duration-300 font-mono
+                      w-full p-4 rounded-lg border text-left transition-all duration-300 font-mono text-sm
                       ${isSelected ? 'border-cyan-400 bg-cyan-500/20' : 'border-gray-700/50 hover:border-cyan-400/50'}
                       ${isCorrect ? 'border-green-500 bg-green-500/20' : ''}
                       ${isWrong ? 'border-red-500 bg-red-500/30 animate-shake' : ''}
