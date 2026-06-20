@@ -25,6 +25,7 @@ export const MOCK_LEADERBOARD: MockTeam[] = [
   { rank: 13, name: 'Firewall Elite', school: 'Лицей №9', city: 'Пермь', country: 'Россия', score: 420, tour1: false, tour2: false },
   { rank: 14, name: 'Zero Day', school: 'Гимназия №6', city: 'Воронеж', country: 'Россия', score: 380, tour1: false, tour2: false },
   { rank: 15, name: 'Hex Demons', school: 'Школа №19', city: 'Красноярск', country: 'Россия', score: 340, tour1: false, tour2: false },
+
 ];
 
 export interface Task {

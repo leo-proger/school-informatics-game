@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AssetLoadingScreen from "./AssetLoadingScreen";
+import { loadVideo } from "@/app/lib/video-cache";
 
 interface VideoPlayerProps {
   src: string;
@@ -13,9 +14,35 @@ export default function VideoPlayer({ src, onEnded, onSkip }: VideoPlayerProps) 
   // Состояние сбрасывается за счёт key={src} на стороне вызова (компонент перемонтируется).
   const videoRef = useRef<HTMLVideoElement>(null);
   const startedRef = useRef(false); // видео реально начало проигрываться
-  const [loading, setLoading] = useState(true);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null); // готово к показу, когда не null
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0); // для кнопки «Повторить»
+
+  // Полная загрузка видео (из кэша или сети) ДО показа — никаких лагов буферизации.
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    let createdUrl: string | null = null;
+    startedRef.current = false;
+
+    loadVideo(src, p => { if (!cancelled) setProgress(p); }, controller.signal)
+      .then(url => {
+        if (cancelled) { URL.revokeObjectURL(url); return; }
+        createdUrl = url;
+        setObjectUrl(url);
+      })
+      .catch((err: unknown) => {
+        if (cancelled || (err as { name?: string })?.name === "AbortError") return;
+        setError(true);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [src, attempt]);
 
   // Принудительно запускаем воспроизведение (autoplay иногда не стартует сам)
   const tryPlay = () => {
@@ -24,58 +51,51 @@ export default function VideoPlayer({ src, onEnded, onSkip }: VideoPlayerProps) 
     });
   };
 
-  // Прогресс буферизации (сколько секунд видео уже загружено)
-  const handleProgress = () => {
-    const v = videoRef.current;
-    if (!v || !v.duration || !isFinite(v.duration) || v.buffered.length === 0) return;
-    setProgress(Math.min(0.99, v.buffered.end(v.buffered.length - 1) / v.duration));
-  };
-
   const handleTimeUpdate = () => {
     const v = videoRef.current;
     if (v && v.currentTime > 0.2) startedRef.current = true;
   };
 
-  // Защита от ложного "ended": переходим дальше только если ролик реально доигран.
+  // Защита от ложного "ended": идём дальше только если ролик реально доигран до конца.
   const handleEnded = () => {
     const v = videoRef.current;
-    if (!startedRef.current) { tryPlay(); return; }
-    if (v && isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration - 1) return;
-    onEnded();
+    if (!v || !startedRef.current) { tryPlay(); return; }
+    if (isFinite(v.duration) && v.duration > 1 && v.currentTime >= v.duration - 1) {
+      onEnded();
+    }
+    // иначе (нулевая/неизвестная длительность) — не перескакиваем сюжет
   };
 
   const handleRetry = () => {
     setError(false);
-    setLoading(true);
     setProgress(0);
-    startedRef.current = false;
-    videoRef.current?.load();
+    setObjectUrl(null);
+    setAttempt(a => a + 1);
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-black">
-      <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        onLoadedData={() => { setLoading(false); tryPlay(); }}
-        onCanPlay={() => { setLoading(false); tryPlay(); }}
-        onPlaying={() => { setLoading(false); startedRef.current = true; }}
-        onWaiting={() => setLoading(true)}
-        onProgress={handleProgress}
-        onTimeUpdate={handleTimeUpdate}
-        onError={() => setError(true)}
-        onEnded={handleEnded}
-      >
-        <source src={src} type="video/mp4" />
-        Ваш браузер не поддерживает видео.
-      </video>
+      {/* Видео монтируется только когда полностью загружено → без лагов */}
+      {objectUrl && (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          src={objectUrl}
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          onLoadedData={tryPlay}
+          onCanPlay={tryPlay}
+          onPlaying={() => { startedRef.current = true; }}
+          onTimeUpdate={handleTimeUpdate}
+          onError={() => setError(true)}
+          onEnded={handleEnded}
+        />
+      )}
 
-      {/* Экран загрузки поверх видео, пока ролик буферизуется */}
-      {(loading || error) && (
+      {/* Экран загрузки поверх, пока видео скачивается целиком */}
+      {(!objectUrl || error) && (
         <div className="absolute inset-0 z-40">
           <AssetLoadingScreen
             progress={error ? 0 : progress}

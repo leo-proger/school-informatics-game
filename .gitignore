@@ -47,3 +47,4 @@ next-env.d.ts
 
 # Source documents (not part of the app)
 *.docx
+.video-originals/

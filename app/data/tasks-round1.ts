@@ -45,7 +45,7 @@ export const round1Tasks: GameTask[] = [
     id: "task-5",
     title: "СЕТЕВАЯ ТОПОЛОГИЯ",
     description: "Если A=1, B=2, C=3... то сумма букв слова VOID равна?",
-    answer: "52",
+    answer: "50",
     hint: "V=22, O=15, I=9, D=4",
     difficulty: "hard",
     timeLimit: 480,
