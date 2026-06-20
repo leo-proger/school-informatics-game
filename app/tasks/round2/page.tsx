@@ -295,7 +295,7 @@ export default function Round2Page() {
         <TopHUD progress={75} letters={[]} title="VOID DETECTED" />
         {/* Голограмма — ПОВЕРХ ДИАЛОГА (z-50) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 overflow-hidden">
-          <div className="relative w-[500px] h-[500px]">
+          <div className="relative w-[300px] h-[300px] sm:w-[500px] sm:h-[500px]">
             <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full animate-ping" />
             <div className="relative w-full h-full drop-shadow-[0_0_100px_rgba(239,68,68,0.5)]">
               <Image
@@ -347,7 +347,7 @@ export default function Round2Page() {
       <TaskBackground>
         <TopHUD progress={progress} letters={[]} title="VOID NETWORK" />
 
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
+        <div className="relative z-20 min-h-screen flex items-center justify-center px-4 pt-36 pb-8 sm:p-10">
           <div className="w-full max-w-[1700px]">
             <TaskMap
               tasks={nodes}
