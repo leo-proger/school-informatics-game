@@ -50,11 +50,11 @@ export default function DialogueBox({
   const avatarSrc = getAvatarSrc();
 
   return (
-    <div className="fixed bottom-4 sm:bottom-8 left-0 right-0 z-50">
+    <div className="fixed bottom-3 sm:bottom-8 left-0 right-0 z-50">
       {/* Аватарка */}
-      <div className="relative z-20 ml-4 sm:ml-0 mb-4 sm:mb-8">
+      <div className="relative z-20 ml-3 sm:ml-0 mb-2 sm:mb-8 w-fit">
         <div
-          className="w-60 h-36 sm:w-96 sm:h-52 rounded-2xl border-4 overflow-hidden bg-[#0a0e1a] shadow-[0_0_80px_rgba(34,211,238,0.25)]"
+          className="w-40 h-24 sm:w-96 sm:h-52 rounded-xl sm:rounded-2xl border-2 sm:border-4 overflow-hidden bg-[#0a0e1a] shadow-[0_0_80px_rgba(34,211,238,0.25)]"
           style={{
             borderColor: `${color}60`,
             boxShadow: `0 0 80px ${color}30, inset 0 0 80px ${color}10`,
@@ -87,15 +87,23 @@ export default function DialogueBox({
           />
 
           <GlassPanel>
-            <div className="flex h-[200px] sm:h-[220px] relative z-0">
+            <div className="flex h-[150px] sm:h-[220px] relative z-0">
               <CharacterPlate
                 speaker={speaker}
                 avatar=""
                 color={color}
               />
 
-              <div className="flex-1 p-4 sm:p-10 flex flex-col justify-between min-w-0">
-                <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 p-3 sm:p-10 flex flex-col min-w-0">
+                {/* Имя персонажа отдельной строкой (только моб.) */}
+                <div className="sm:hidden flex items-center gap-2 mb-1.5 shrink-0">
+                  <span className="font-mono text-[11px] font-bold tracking-widest uppercase" style={{ color }}>
+                    {speaker}
+                  </span>
+                  <span className="flex-1 h-px rounded-full" style={{ background: `${color}55` }} />
+                </div>
+
+                <div className="flex-1 overflow-y-auto text-sm sm:text-base">
                   <TypeWriter
                     text={text}
                     speed={18}
@@ -103,11 +111,11 @@ export default function DialogueBox({
                   />
                 </div>
 
-                <div className="flex justify-end mt-3 sm:mt-4 shrink-0">
+                <div className="flex justify-end mt-2 sm:mt-4 shrink-0">
                   <button
                     onClick={onNext}
                     className={`
-                      w-12 h-12 text-2xl
+                      w-10 h-10 text-xl
                       sm:w-16 sm:h-16 sm:text-3xl
                       rounded-full
                       border
