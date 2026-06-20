@@ -76,7 +76,10 @@ export default function Round1Page() {
           const raw = localStorage.getItem(SAVE_KEY);
           if (raw) {
             const savedData = JSON.parse(raw);
-            setPhase(savedData.phase === "video" ? "prologue" : (savedData.phase ?? "prologue"));
+            // НЕ конвертируем "video"→"prologue": автосохранение пишет phase:"video"
+            // сразу при старте ролика, и повторное восстановление (Strict Mode / reload)
+            // иначе вырезало бы интро-видео на ~1-й секунде. Тур 2 так и работает.
+            setPhase(savedData.phase ?? "video");
             setPrologueIndex(savedData.prologueIndex ?? 0);
             setCompletedTasks(savedData.completedTasks ?? []);
             setActiveTaskId(savedData.activeTaskId ?? loaded[0]?.id ?? "");
