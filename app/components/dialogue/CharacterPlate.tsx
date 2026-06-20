@@ -12,7 +12,7 @@ export default function CharacterPlate({ speaker, avatar, color }: Props) {
   const showAvatar = avatar && avatar.length > 0;
 
   return (
-    <div className="flex flex-col items-center justify-center w-24 sm:w-48 p-2 sm:p-6 border-r border-white/5 shrink-0">
+    <div className="hidden sm:flex flex-col items-center justify-center w-48 p-6 border-r border-white/5 shrink-0">
       {showAvatar && (
         <div
           className="w-12 h-12 sm:w-20 sm:h-20 rounded-full border-2 mb-2 sm:mb-4 overflow-hidden"
