@@ -45,10 +45,6 @@ export default function TasksPage() {
   const { team, isLoading, refreshTeam } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
   const [showRound2Reset, setShowRound2Reset] = useState(false);
   const [saveLabel, setSaveLabel] = useState<string | null>(null);
   const [round2HasSave, setRound2HasSave] = useState(false);
@@ -86,12 +82,12 @@ export default function TasksPage() {
 
 
   return (
-    <div className="relative h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-x-hidden">
       <Background />
 
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-20">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <p className="text-xs tracking-[0.4em] text-cyan-400 uppercase font-mono mb-3">/ВЫБОР ТУРА/</p>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-2">
             ПРОТОКОЛ{" "}

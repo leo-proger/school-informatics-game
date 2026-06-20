@@ -309,8 +309,8 @@ function TeamsTab() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-cyan-500/30 overflow-hidden card-glow">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-cyan-500/30 overflow-x-auto card-glow">
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b border-cyan-500/25 bg-white/[0.07]">
               {([
@@ -630,7 +630,7 @@ function TasksTab() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
         <div className="flex gap-2">
           {([1, 2] as const).map(t => (
             <button key={t} onClick={() => setTourFilter(t)}
@@ -645,8 +645,8 @@ function TasksTab() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-cyan-500/30 overflow-hidden card-glow">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-cyan-500/30 overflow-x-auto card-glow">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-cyan-500/25 bg-white/[0.07]">
               {["#", "Название", "Тип", "Сложность", "Лимит (сек)", "Мин. игроков", ""].map(h => (
@@ -688,7 +688,7 @@ function TasksTab() {
           <div className="bg-[#0a0a1a] border border-cyan-500/30 rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-6">{isNew ? "Новое задание" : "Редактировать задание"}</h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {isNew && <Input label="ID (уникальный, нельзя изменить после создания)" value={editing.id} onChange={v => setEditing({ ...editing, id: v })} />}
                 <Input label="Номер задания" type="number" value={editing.task_number} onChange={v => setEditing({ ...editing, task_number: Number(v) })} />
                 <Input label="Лимит времени (сек)" type="number" value={editing.time_limit} onChange={v => setEditing({ ...editing, time_limit: Number(v) })} />
@@ -709,7 +709,7 @@ function TasksTab() {
                 />
               )}
               <Input label="Подсказка" value={editing.hint} onChange={v => setEditing({ ...editing, hint: v })} rows={2} />
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Select label="Тур" value={String(editing.tour)} onChange={v => setEditing({ ...editing, tour: Number(v) as 1 | 2 })}
                   options={[{ value: "1", label: "Тур 1" }, { value: "2", label: "Тур 2" }]} />
                 <Select label="Тип" value={editing.task_type} onChange={v => setEditing({ ...editing, task_type: v as "regular" | "boss" })}
@@ -875,12 +875,12 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-8 border-b border-cyan-500/20 pb-0">
+        <div className="flex gap-1 mb-8 border-b border-cyan-500/20 pb-0 overflow-x-auto">
           {TABS.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-5 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
+              className={`px-3 sm:px-5 py-3 text-sm font-medium transition-all border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 tab === t.key
                   ? "border-cyan-400 text-cyan-300"
                   : "border-transparent text-muted hover:text-slate-200"

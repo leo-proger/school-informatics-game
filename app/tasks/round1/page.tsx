@@ -200,7 +200,7 @@ export default function Round1Page() {
     return (
       <TaskBackground>
         <TopHUD progress={progress} letters={collectedLetters} title="ROUND 1 • NEXUS" />
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
+        <div className="relative z-20 min-h-screen flex items-center justify-center px-4 pt-36 pb-8 sm:p-10">
           <div className="w-full max-w-[1700px]">
             <TaskMap
               tasks={nodes}
@@ -323,12 +323,12 @@ export default function Round1Page() {
     return (
       <TaskBackground>
         <TopHUD progress={100} letters={collectedLetters} title="ACCESS CODE" />
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-10">
-          <GlassPanel className="p-12 max-w-2xl w-full text-center">
-            <h2 className="text-3xl text-yellow-300 font-bold mb-4">ВВЕДИТЕ КОД ДОСТУПА</h2>
-            <p className="text-gray-400 mb-2">
-              Собранные буквы: 
-              <span className="text-yellow-300 font-bold tracking-[8px] ml-2">
+        <div className="relative z-20 min-h-screen flex items-center justify-center px-4 pt-36 pb-8 sm:p-10">
+          <GlassPanel className="p-6 sm:p-12 max-w-2xl w-full text-center">
+            <h2 className="text-2xl sm:text-3xl text-yellow-300 font-bold mb-4">ВВЕДИТЕ КОД ДОСТУПА</h2>
+            <p className="text-gray-400 mb-2 text-sm sm:text-base">
+              Собранные буквы:
+              <span className="text-yellow-300 font-bold tracking-[6px] sm:tracking-[8px] ml-2">
                 {collectedLetters.join(" ")}
               </span>
             </p>
@@ -339,7 +339,7 @@ export default function Round1Page() {
               type="text"
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-              className="w-full bg-black/60 border border-yellow-500/30 p-4 text-yellow-300 text-2xl text-center outline-none mb-6 tracking-[8px] focus:border-yellow-500 transition-colors"
+              className="w-full bg-black/60 border border-yellow-500/30 p-3 sm:p-4 text-yellow-300 text-xl sm:text-2xl text-center outline-none mb-6 tracking-[6px] sm:tracking-[8px] focus:border-yellow-500 transition-colors"
               placeholder="ВВЕДИТЕ КОД"
               autoFocus
               onKeyDown={(e) => {

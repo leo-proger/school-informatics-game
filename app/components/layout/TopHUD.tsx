@@ -12,22 +12,22 @@ export default function TopHUD({
   letters = [],
 }: Props) {
   return (
-    <div className="fixed top-0 left-0 w-full z-40 p-8">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-3">
-          <div className="w-5 h-5 rounded-full bg-yellow-300 animate-pulse" />
-          <div className="w-5 h-5 rounded-full bg-yellow-300" />
+    <div className="fixed top-0 left-0 w-full z-40 p-4 sm:p-8">
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex gap-2 sm:gap-3 shrink-0">
+          <div className="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-yellow-300 animate-pulse" />
+          <div className="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-yellow-300" />
         </div>
 
-        <div className="text-yellow-300 font-bold tracking-[6px]">
+        <div className="text-yellow-300 font-bold tracking-[3px] sm:tracking-[6px] text-xs sm:text-base text-center truncate">
           {title}
         </div>
 
-        <div className="w-5 h-5 rounded-full bg-yellow-300" />
+        <div className="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-yellow-300 shrink-0" />
       </div>
 
-      <div className="mt-6">
-        <div className="flex justify-between text-xs text-yellow-300 mb-2">
+      <div className="mt-4 sm:mt-6">
+        <div className="flex justify-between text-[10px] sm:text-xs text-yellow-300 mb-2">
           <span>NETWORK</span>
           <span>{progress}%</span>
         </div>
@@ -39,11 +39,11 @@ export default function TopHUD({
         </div>
       </div>
 
-      <div className="mt-5 flex gap-3 justify-center flex-wrap">
+      <div className="mt-4 sm:mt-5 flex gap-2 sm:gap-3 justify-center flex-wrap">
         {letters.map((letter, idx) => (
           <div
             key={`${letter}-${idx}`}
-            className="w-10 h-10 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-300 font-bold text-xl"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-300 font-bold text-base sm:text-xl"
           >
             {letter}
           </div>
