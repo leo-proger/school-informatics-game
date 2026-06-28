@@ -1,21 +1,124 @@
-# NEXUS Олимпиада — Протокол ФЕНИКС
+<div align="center">
 
-Платформа для проведения олимпиады в киберпанк RPG-сеттинге (6–20 июня 2026). Команды регистрируются, проходят пролог,
-решают задания двух туров и соревнуются в рейтинге.
+# NEXUS Олимпиада — Протокол «ФЕНИКС»
 
-## Стек
+**Веб-платформа для проведения онлайн-олимпиады в киберпанк RPG-сеттинге.**
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **Tailwind CSS 4** — стилизация
-- **Supabase** — база данных и авторизация (таблицы: `teams`, `participants`, `tasks`, `settings`)
-- **localStorage** — сессия игрока (`phoenix_session`), прогресс тура 1 (`phoenix_round1_progress`), прогресс тура 2 (`phoenix_round2_progress`)
-- **Vercel** — деплой (только при пуше в `main`)
+Участники объединяются в команды, проходят сюжетные диалоги и решают задания
+двух туров, зарабатывая очки и поднимаясь в рейтинге.
 
-## Git-workflow
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-149ECA?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-- Каждый разработчик работает **в своей ветке**
-- **Не пушить напрямую в `main`**
-- Для мержа в `main` — пишите [@leo-proger](https://github.com/leo-proger) на GitHub
+</div>
+
+---
+
+## О проекте
+
+«Протокол ФЕНИКС» — это игровая оболочка для образовательной олимпиады по
+информатике и кибербезопасности. Вместо привычного списка задач участник
+попадает в историю: международная цифровая инфраструктура заражена вирусом,
+алгоритмы дают сбой, шифры ломаются — и команде предстоит «взломать протокол»,
+проходя задания тур за туром.
+
+Платформа закрывает весь цикл проведения олимпиады:
+
+- регистрация команд и участников;
+- прохождение заданий с проверкой ответов в реальном времени;
+- сюжетные диалоги, видеозаставки и боссы между этапами;
+- рейтинг команд;
+- админ-панель для управления командами, заданиями и датами турнира.
+
+> Проект сделан как готовый каркас: визуальный стиль, игровые механики и
+> структуру заданий легко адаптировать под собственное мероприятие.
+
+## Скриншоты
+
+| Главный экран | Правила игры |
+|:---:|:---:|
+| ![Главный экран](https://github.com/user-attachments/assets/5436cae3-c974-47ed-80a9-ca16b09ecb93) | ![Правила игры](https://github.com/user-attachments/assets/55d2c901-6393-4c60-9298-5abb7f7620a7) |
+
+## Возможности
+
+- **Сюжетный режим** — пролог, диалоги персонажей (`protocol`, `nexus`, `void`,
+  `player`), видеозаставки и финальные боссы между этапами.
+- **Два тура с разной механикой** — тур 1 (задания разной сложности на карте) и
+  тур 2 (5 босс-заданий + голограмма VOID после трёх решённых).
+- **Реальная проверка ответов** — задания проверяются на сервере, а не «на
+  доверии»; за сложность начисляются разные очки.
+- **Сохранение прогресса** — каждая фаза игры сохраняется в `localStorage`,
+  можно вернуться с того же места.
+- **Рейтинг** — таблица лидеров с фильтрами по городу и школе.
+- **Админ-панель** (`/admin`) — вкладки «Команды», «Задания», «Настройки»
+  (в т.ч. даты туров); доступна только командам с флагом `is_admin`.
+- **Адаптивность** — интерфейс рассчитан и на десктоп, и на мобильные экраны.
+
+## Технологии
+
+| Слой | Технологии |
+|------|-----------|
+| Фронтенд | Next.js 16 (App Router), React 19, TypeScript |
+| Стили | Tailwind CSS 4 |
+| Бэкенд / БД | Supabase (PostgreSQL): таблицы `teams`, `participants`, `tasks`, `settings` |
+| Состояние игрока | `localStorage` (сессия и прогресс туров) |
+| Тесты | Vitest + Testing Library |
+| Деплой | Vercel |
+
+## Быстрый старт
+
+### 1. Клонирование и установка
+
+```bash
+git clone git@github.com:leo-proger/school-informatics-game.git
+cd school-informatics-game
+npm install
+```
+
+### 2. Настройка Supabase
+
+Создайте бесплатный проект на [supabase.com](https://supabase.com/) и заведите
+таблицы `teams`, `participants`, `tasks`, `settings` (схему смотрите в разделе
+[«База данных»](#база-данных)).
+
+### 3. Переменные окружения
+
+```bash
+cp .env.example .env.local
+```
+
+Заполните `.env.local` значениями из вашего проекта Supabase
+(**Project Settings → API**):
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+> `NEXT_PUBLIC_SUPABASE_ANON_KEY` — это публичный `anon`-ключ; доступ к данным
+> ограничивается политиками Row Level Security на стороне Supabase.
+
+### 4. Запуск
+
+```bash
+npm run dev
+```
+
+Откройте [http://localhost:3000](http://localhost:3000).
+
+### Команды
+
+```bash
+npm run dev     # режим разработки (Turbopack)
+npm run build   # production-сборка
+npm run start   # запуск собранного приложения
+npm run lint    # проверка ESLint
+npm run test    # запуск тестов (Vitest)
+```
 
 ## Структура проекта
 
@@ -28,93 +131,80 @@ app/
 ├── tasks/
 │   ├── page.tsx              # Выбор тура, статус сохранений
 │   ├── round1/               # Тур 1: пролог → карта → диалоги → босс → победа
-│   └── round2/               # Тур 2: диалоги → карта босс-заданий → голограмма VOID → победа
-├── leaderboard/              # Рейтинг (моковые данные)
-├── admin/                    # Панель администратора (только для isAdmin)
+│   └── round2/               # Тур 2: диалоги → карта босс-заданий → VOID → победа
+├── leaderboard/              # Рейтинг
+├── admin/                    # Панель администратора (только для is_admin)
 ├── components/
-│   ├── navbar.tsx
 │   ├── dialogue/             # DialogueBox, CharacterPlate, TypeWriter
 │   ├── layout/               # Background, GameLayout, TaskBackground, TopHUD
 │   ├── tasks/                # TaskMap, TaskCard, PuzzleModal
-│   └── ui/                   # GlassPanel, NeonButton, ProgressBar
+│   └── ui/                   # GlassPanel, NeonButton, ProgressBar, VideoPlayer
 ├── data/
 │   ├── tasks-round1.ts       # Задания тура 1
-│   ├── tasks-round2.ts       # Босс-задания тура 2 (5 шт.)
+│   ├── tasks-round2.ts       # Босс-задания тура 2
 │   ├── dialogues.ts          # Диалоги тура 1
-│   └── dialogues-round2.ts   # Диалоги тура 2 + voidHologramDialogues
+│   └── dialogues-round2.ts   # Диалоги тура 2
 └── lib/
-    ├── auth-context.tsx      # Контекст авторизации через Supabase
+    ├── auth-context.tsx      # Авторизация через Supabase
     ├── supabase.ts           # Клиент Supabase
+    ├── game-actions.ts       # Запись очков и прогресса в БД
     ├── types.ts              # Общие типы (GameTask, TaskNode, DialogueLine)
-    ├── characters.ts         # 4 персонажа: protocol, nexus, void, player
-    ├── game-utils.ts         # Утилиты: DIFFICULTY_POINTS, построение TaskNode-графа
-    ├── settings-utils.ts     # Утилиты для работы с таблицей settings
-    └── mock-data.ts          # Моковый лидерборд, TOURNAMENT_DATES
+    ├── characters.ts         # Персонажи: protocol, nexus, void, player
+    └── game-utils.ts         # Очки за сложность, построение графа заданий
 ```
 
-## Настройка и запуск
-
-### 1. Установка зависимостей
-
-```bash
-npm install
-```
-
-### 2. Получить доступ к Supabase
-
-БД уже поднята и наполнена. Попросите владельца проекта добавить вас в организацию через **Supabase Dashboard →
-Organization Settings → Members → Invite**.
-
-После принятия приглашения откройте проект и скопируйте **Project Settings → API → вкладка "Legacy anon..." → "anon
-public" ключ** — это `NEXT_PUBLIC_SUPABASE_ANON_KEY` в `.env.local`
-
-### 3. Переменные окружения
-
-```bash
-cp .env.example .env.local
-```
-
-Вставьте ключи из предыдущего шага (переменную `NEXT_PUBLIC_SUPABASE_URL` менять не надо):
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://yanxxepahepxskhlbxif.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-```
-
-### 4. Запуск в режиме разработки
-
-```bash
-npm run dev
-```
-
-Открыть [http://localhost:3000](http://localhost:3000).
-
-## Игровые фазы
+## Игровой процесс
 
 ### Тур 1 (`/tasks/round1`)
 
 ```
-video → prologue → round1 → taskDialogue → round1Complete → round2Code → round2Dialogue → round2Boss → victory
+видео → пролог → задания → диалог → завершение → код доступа → аутро
 ```
 
-Прогресс сохраняется в `localStorage` при каждом переходе фазы.
+4 задания разной сложности (`easy`, `medium`, `hard`) на карте, финальный диалог
+и переход к следующему туру. Ответы проверяются через `checkAnswer()`.
 
 ### Тур 2 (`/tasks/round2`)
 
 ```
-dialogue → boss → victory
+интро → диалоги → босс → победа → аутро
 ```
 
-5 босс-заданий на карте. После 3 выполненных появляется голограмма VOID. Очки (500 за задание) и флаг `tour2_completed` записываются в Supabase.
+5 босс-заданий (по 500 очков за каждое), проверка через `checkBossAnswer()`.
+После трёх решённых появляется голограмма VOID. Очки и флаг `tour2_completed`
+записываются в Supabase.
 
-## Механика
+Прогресс каждой фазы сохраняется в `localStorage`, поэтому игру можно продолжить
+с того же места.
 
-**Регистрация** — название команды (мин. 3 симв.) + пароль (мин. 6 симв.) + данные участников (1–5 чел.: ФИО, город, школа).
+## База данных
 
-**Тур 1** — 4 задания разной сложности (`easy`, `medium`, `hard`) + финальный диалог. Ответы проверяются через `checkAnswer()`.
+Минимальная схема таблиц Supabase:
 
-**Тур 2** — 5 босс-заданий (`round2Tasks`). Проверка через `checkBossAnswer()`. 500 очков за каждое верно решённое.
+| Таблица | Ключевые поля |
+|---------|---------------|
+| `teams` | `id`, `name`, `password`, `is_admin`, `score`, `tour1_completed`, `tour2_completed`, `registered_at` |
+| `participants` | `id`, `team_id`, `full_name`, `city`, `school` |
+| `tasks` | `id`, `title`, `description`, `answer`, `hint`, `difficulty`, `time_limit`, `task_number`, `tour`, `task_type`, `min_team_size` |
+| `settings` | `key`, `value`, `label` (даты и параметры турнира) |
 
-**Рейтинг** — моковые данные (`MOCK_LEADERBOARD`). Фильтрация по городу и школе.
+Даты туров редактируются в админ-панели и хранятся в таблице `settings`.
 
-**Даты туров** — управляются через таблицу `settings` в Supabase, редактируются в `/admin`.
+## Деплой
+
+Проект разворачивается на [Vercel](https://vercel.com/). Деплой настроен только
+на пуш в ветку `main` (см. `vercel.json`). Не забудьте задать переменные
+окружения `NEXT_PUBLIC_SUPABASE_URL` и `NEXT_PUBLIC_SUPABASE_ANON_KEY` в
+настройках проекта Vercel.
+
+## Контрибьюторы
+
+- [Leo Proger](https://github.com/leo-proger)
+- [Fllorovi](https://github.com/Fllorovi)
+- [thwkxri](https://github.com/thwkxri)
+
+Также ещё 4 участника без GitHub профиля.
+
+## Лицензия
+
+Распространяется под лицензией **Apache 2.0** — см. файл [LICENSE](LICENSE).
