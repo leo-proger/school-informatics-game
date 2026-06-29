@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:reset": "tsx scripts/db-reset.ts",
+    "db:reset:remote": "tsx scripts/db-reset.ts --remote"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -29,6 +31,7 @@
     "eslint-config-next": "16.2.9",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }
