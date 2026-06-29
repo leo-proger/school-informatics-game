@@ -43,6 +43,10 @@
 |:---:|:---:|
 | ![Главный экран](https://github.com/user-attachments/assets/5436cae3-c974-47ed-80a9-ca16b09ecb93) | ![Правила игры](https://github.com/user-attachments/assets/55d2c901-6393-4c60-9298-5abb7f7620a7) |
 
+| Задания | Рейтинг |
+|:---:|:---:|
+| ![Задания](https://github.com/user-attachments/assets/4a67f6bc-238c-4218-bfc1-d2d37b66cfca) | ![Рейтинг](https://github.com/user-attachments/assets/ed59b619-75ae-4200-8375-0ac346ffe2cf) |
+
 ## Возможности
 
 - **Сюжетный режим** — пролог, диалоги персонажей (`protocol`, `nexus`, `void`,
@@ -79,30 +83,46 @@ cd school-informatics-game
 npm install
 ```
 
-### 2. Настройка Supabase
+### 2. Вариант А — локальный Supabase (рекомендуется для разработки)
 
-Создайте бесплатный проект на [supabase.com](https://supabase.com/) и заведите
-таблицы `teams`, `participants`, `tasks`, `settings` (схему смотрите в разделе
-[«База данных»](#база-данных)).
+Требуется [Docker](https://www.docker.com/) и [Supabase CLI](https://supabase.com/docs/guides/cli).
 
-### 3. Переменные окружения
+```bash
+# Установить CLI (macOS)
+brew install supabase/tap/supabase
+
+# Поднять локальный Supabase (первый раз скачивает образы ~500 МБ)
+supabase start
+
+# Переключить .env.local на локальный экземпляр
+cp .env.local.example-local .env.local
+
+# Заполнить БД тестовыми данными
+npm run db:reset
+```
+
+После `supabase start` CLI выведет URL и ключи. Стандартные значения для
+локального запуска уже прописаны в `.env.local.example-local`.
+
+**Studio (GUI для БД)** доступна на [http://127.0.0.1:54323](http://127.0.0.1:54323).
+
+### 2. Вариант Б — облачный Supabase
+
+Создайте бесплатный проект на [supabase.com](https://supabase.com/).
+Схема БД применится автоматически через файлы в `supabase/migrations/`.
 
 ```bash
 cp .env.example .env.local
 ```
 
-Заполните `.env.local` значениями из вашего проекта Supabase
-(**Project Settings → API**):
+Заполните `.env.local` значениями из **Project Settings → API**:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-> `NEXT_PUBLIC_SUPABASE_ANON_KEY` — это публичный `anon`-ключ; доступ к данным
-> ограничивается политиками Row Level Security на стороне Supabase.
-
-### 4. Запуск
+### 3. Запуск
 
 ```bash
 npm run dev
@@ -113,12 +133,23 @@ npm run dev
 ### Команды
 
 ```bash
-npm run dev     # режим разработки (Turbopack)
-npm run build   # production-сборка
-npm run start   # запуск собранного приложения
-npm run lint    # проверка ESLint
-npm run test    # запуск тестов (Vitest)
+npm run dev              # режим разработки
+npm run build            # production-сборка
+npm run start            # запуск собранного приложения
+npm run lint             # проверка ESLint
+npm run test             # запуск тестов (Vitest)
+npm run db:reset         # сбросить и заполнить локальную БД тестовыми данными
+npm run db:reset:remote  # то же для удалённой БД (требует подтверждения)
 ```
+
+### Тестовые аккаунты (после `db:reset`)
+
+| Логин | Пароль | Роль |
+|-------|--------|------|
+| `admin` | `admin123` | Администратор (доступ к `/admin`) |
+| `Nexus Breakers` | `pass1` | Оба тура завершены, 920 очков |
+| `Cyber Wolves` | `pass4` | Тур 1 завершён, 780 очков |
+| `Ghost Protocol` | `pass5` | Новая команда, 0 очков |
 
 ## Структура проекта
 
